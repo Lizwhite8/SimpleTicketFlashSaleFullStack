@@ -14,3 +14,16 @@ spring:
   sql:
     init:
       mode: always
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:7080/realms/SimpleFlashSale
+
+keycloak:
+  auth-server-url: http://localhost:7080
+  realm: SimpleFlashSale
+  client-id: SimpleFlashSaleClient
+  client-secret: Orm6SyrIN5W3t7mQBjwiH6xjvycZ774e
+  admin-username: admin
+  admin-password: admin

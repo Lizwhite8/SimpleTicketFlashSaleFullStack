@@ -15,6 +15,7 @@ public class CouponMapper {
         dto.setName(coupon.getName());
         dto.setDescription(coupon.getDescription());
         dto.setQuantity(coupon.getQuantity());
+        dto.setDeleted(coupon.isDeleted()); // ✅ Map isDeleted field
         return dto;
     }
 
@@ -29,6 +30,7 @@ public class CouponMapper {
         coupon.setName(dto.getName());
         coupon.setDescription(dto.getDescription());
         coupon.setQuantity(dto.getQuantity());
+        coupon.setDeleted(dto.isDeleted()); // ✅ Map isDeleted field
         return coupon;
     }
 }

@@ -1,33 +1,30 @@
 package Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity;
 
+
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "user_coupons")
 @Getter
 @Setter
-@Entity
-@Table(name = "coupons")
-public class Coupon {
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserCoupon {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String name;
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    @Column(nullable = false)
-    private String description;
-
-    @Column(nullable = false)
-    private int quantity; // 剩余库存
+    @ManyToOne
+    @JoinColumn(name = "coupon_id", nullable = false)
+    private Coupon coupon;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    @Column(nullable = false)
-    private boolean isDeleted = false; // ✅ New field for soft deletion
-
 }
-
