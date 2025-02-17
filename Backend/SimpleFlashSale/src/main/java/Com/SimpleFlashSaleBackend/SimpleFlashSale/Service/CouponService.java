@@ -9,9 +9,11 @@ import Com.SimpleFlashSaleBackend.SimpleFlashSale.Mapper.CouponMapper;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.CouponRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserCouponRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserRepository;
+import Com.SimpleFlashSaleBackend.SimpleFlashSale.Response.Response;
 import org.redisson.api.RBucket;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -84,16 +86,28 @@ public class CouponService {
     /** Sync Coupon Data to Redis */
     private void updateCouponInCache(Coupon coupon) {
         String redisKey = COUPON_CACHE_PREFIX + coupon.getId();
+        String quantityKey = redisKey + ":quantity";
+
+        // Store Coupon object (will use Redisson's default serialization)
         RBucket<Coupon> couponCache = redissonClient.getBucket(redisKey);
+
+        // Store quantity as a plain string
+        RBucket<String> quantityCache = redissonClient.getBucket(quantityKey, StringCodec.INSTANCE);
 
         if (!coupon.isDeleted()) {
             couponCache.set(coupon);
-            logger.info("✅ Coupon stored in Redis: {}", coupon);
+
+            // Ensure quantity is stored as a string
+            quantityCache.set(String.valueOf(coupon.getQuantity()));
+
+            logger.info("✅ Coupon stored in Redis: {}, Quantity: {}", coupon, coupon.getQuantity());
         } else {
             couponCache.delete();
+            quantityCache.delete();
             logger.info("❌ Coupon deleted from Redis: {}", coupon.getId());
         }
     }
+
 
     // 删除购物券
     // ✅ Soft delete a coupon
@@ -111,31 +125,36 @@ public class CouponService {
 
     /** Buy Coupon Using Redis & Lua Script */
     @Transactional
-    public String buyCoupon(Long userId, Long couponId) {
+    public Response<String> buyCoupon(Long userId, Long couponId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
-        String couponKey = COUPON_CACHE_PREFIX + couponId;
-        String userOrderSetKey = "SimpleFlashSale#unpaidOrder:" + userId;
-        String unpaidOrdersKey = "SimpleFlashSale#unpaidOrders";
+        String couponQuantityKey = COUPON_CACHE_PREFIX + couponId + ":quantity";
+        String userOrderSetKey = "SimpleFlashSale#couponUsers:" + couponId;
 
-        long orderId = System.currentTimeMillis(); // Unique order ID
-        long currentTime = Instant.now().getEpochSecond();
+        RBucket<String> quantityBucket = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
+        String redisValue = quantityBucket.get();  // Read as string
+        logger.info("📌 Redis Value for {}: {}", couponQuantityKey, redisValue);
 
         RScript script = redissonClient.getScript();
-        List<Object> keys = Arrays.asList(couponKey, userOrderSetKey, unpaidOrdersKey);
-        List<Object> args = Arrays.asList(userId.toString(), String.valueOf(orderId), String.valueOf(currentTime));
+        List<Object> keys = Arrays.asList(couponQuantityKey, userOrderSetKey);
+        List<Object> args = Arrays.asList(userId.toString());
 
         String luaScript = loadLuaScript("LuaScript/buy_coupon.lua");
         Long result = script.eval(RScript.Mode.READ_WRITE, luaScript, RScript.ReturnType.INTEGER, keys, args);
 
+        // Handle different responses
         if (result == -1) {
-            throw new RuntimeException("Coupon out of stock!");
-        } else if (result == -2) {
-            throw new RuntimeException("User already purchased this coupon!");
+            return new Response<>(400, "Coupon out of stock!", null);
+        }
+        if (result == -2) {
+            return new Response<>(400, "User already purchased this coupon!", null);
+        }
+        if (result == -3) {
+            return new Response<>(500, "⚠️ Redis returned a non-integer for quantity!", null);
         }
 
-        return "Order ID: " + orderId + " placed successfully!";
+        return new Response<>(200, "Order placed successfully!", "Success");
     }
 
     public String loadLuaScript(String scriptPath) {

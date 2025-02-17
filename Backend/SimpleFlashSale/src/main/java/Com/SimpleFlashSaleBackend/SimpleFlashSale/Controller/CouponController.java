@@ -1,6 +1,7 @@
 package Com.SimpleFlashSaleBackend.SimpleFlashSale.Controller;
 
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Dto.CouponDTO;
+import Com.SimpleFlashSaleBackend.SimpleFlashSale.Response.Response;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Service.CouponService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,8 +57,11 @@ public class CouponController {
     // ✅ 购买购物券 (Protected Route)
     @PostMapping("/buy")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<String> buyCoupon(@RequestParam Long userId, @RequestParam Long couponId) {
-        String response = couponService.buyCoupon(userId, couponId);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Response<String>> buyCoupon(@RequestParam Long userId, @RequestParam Long couponId) {
+        Response<String> response = couponService.buyCoupon(userId, couponId);
+
+        HttpStatus status = (response.getStatusCode() == 200) ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+
+        return ResponseEntity.status(status).body(response);
     }
 }
