@@ -13,6 +13,8 @@ public class CouponMapper {
         CouponDTO dto = new CouponDTO();
         dto.setId(coupon.getId());
         dto.setName(coupon.getName());
+        dto.setImageURL(coupon.getImageURL());
+        dto.setPrice(coupon.getPrice());
         dto.setDescription(coupon.getDescription());
         dto.setQuantity(coupon.getQuantity());
         dto.setDeleted(coupon.isDeleted()); // ✅ Map isDeleted field
@@ -28,6 +30,8 @@ public class CouponMapper {
         Coupon coupon = new Coupon();
         coupon.setId(dto.getId());
         coupon.setName(dto.getName());
+        coupon.setImageURL(dto.getImageURL());
+        coupon.setPrice(dto.getPrice());
         coupon.setDescription(dto.getDescription());
         coupon.setQuantity(dto.getQuantity());
         coupon.setDeleted(dto.isDeleted()); // ✅ Map isDeleted field

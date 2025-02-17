@@ -12,6 +12,8 @@ import lombok.Setter;
 public class CouponDTO {
     private Long id;
     private String name;
+    private String imageURL;
+    private Integer price;
     private String description;
     private int quantity;
     private boolean isDeleted; // ✅ New field

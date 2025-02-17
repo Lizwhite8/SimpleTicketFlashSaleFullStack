@@ -49,6 +49,8 @@ public class UserService {
                 .map(userCoupon -> new CouponDTO(
                         userCoupon.getCoupon().getId(),
                         userCoupon.getCoupon().getName(),
+                        userCoupon.getCoupon().getImageURL(),
+                        userCoupon.getCoupon().getPrice(),
                         userCoupon.getCoupon().getDescription(),
                         userCoupon.getCoupon().getQuantity(),
                         userCoupon.getCoupon().isDeleted()
