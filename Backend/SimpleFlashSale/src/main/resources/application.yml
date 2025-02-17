@@ -27,3 +27,6 @@ keycloak:
   client-secret: Orm6SyrIN5W3t7mQBjwiH6xjvycZ774e
   admin-username: admin
   admin-password: admin
+
+redis:
+  url: redis://localhost:6379

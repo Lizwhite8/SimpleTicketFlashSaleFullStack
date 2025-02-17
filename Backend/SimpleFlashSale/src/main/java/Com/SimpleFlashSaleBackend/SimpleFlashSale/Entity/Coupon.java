@@ -3,13 +3,14 @@ package Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "coupons")
-public class Coupon {
+public class Coupon{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

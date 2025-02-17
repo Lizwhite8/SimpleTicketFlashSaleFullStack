@@ -55,9 +55,9 @@ public class CouponController {
 
     // ✅ 购买购物券 (Protected Route)
     @PostMapping("/buy")
-    @PreAuthorize("isAuthenticated()") // Requires authentication
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<String> buyCoupon(@RequestParam Long userId, @RequestParam Long couponId) {
-        couponService.buyCoupon(userId, couponId);
-        return ResponseEntity.ok("Coupon purchased successfully!");
+        String response = couponService.buyCoupon(userId, couponId);
+        return ResponseEntity.ok(response);
     }
 }
