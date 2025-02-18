@@ -215,7 +215,7 @@ public class CouponService {
 
     /** Buy Coupon Using Redis & Lua Script */
     @Transactional
-    public Response<String> buyCoupon(Long userId, Long couponId) {
+    public Response<String> buyCoupon(String userId, Long couponId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
@@ -228,7 +228,7 @@ public class CouponService {
 
         RScript script = redissonClient.getScript();
         List<Object> keys = List.of(couponQuantityKey, userOrderSetKey);
-        List<Object> args = List.of(userId.toString());
+        List<Object> args = List.of(userId);
 
         String luaScript = loadLuaScript("LuaScript/buy_coupon.lua");
         Long result = script.eval(RScript.Mode.READ_WRITE, luaScript, RScript.ReturnType.INTEGER, keys, args);

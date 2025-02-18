@@ -14,8 +14,7 @@ import java.util.Set;
 @AllArgsConstructor
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id; // Store Keycloak UUID instead of auto-incremented ID
 
     @Column(nullable = false, unique = true)
     private String username;
@@ -30,3 +29,4 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserCoupon> userCoupons = new HashSet<>();
 }
+

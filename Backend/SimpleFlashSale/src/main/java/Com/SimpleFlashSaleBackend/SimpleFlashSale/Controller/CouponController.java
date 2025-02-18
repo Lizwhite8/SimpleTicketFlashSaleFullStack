@@ -62,8 +62,8 @@ public class CouponController {
 
     // ✅ 购买购物券 (Protected Route)
     @PostMapping("/buy")
-//    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Response<String>> buyCoupon(@RequestParam Long userId, @RequestParam Long couponId) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Response<String>> buyCoupon(@RequestParam String userId, @RequestParam Long couponId) {
         Response<String> response = couponService.buyCoupon(userId, couponId);
 
         HttpStatus status = (response.getStatusCode() == 200) ? HttpStatus.OK : HttpStatus.BAD_REQUEST;

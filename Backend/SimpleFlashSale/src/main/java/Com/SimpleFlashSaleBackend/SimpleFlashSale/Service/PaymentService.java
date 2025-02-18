@@ -52,7 +52,7 @@ public class PaymentService {
             // Parse Kafka message
             String[] data = message.split(",");
             Long orderId = Long.parseLong(data[0]);
-            Long userId = Long.parseLong(data[1]);
+            String userId = String.valueOf(data[1]);
             Long couponId = Long.parseLong(data[2]);
 
             logger.info("🛒 Processing payment for Order ID: {}", orderId);

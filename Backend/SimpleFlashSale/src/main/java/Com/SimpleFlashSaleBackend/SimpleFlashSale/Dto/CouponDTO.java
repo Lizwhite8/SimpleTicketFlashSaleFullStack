@@ -16,5 +16,6 @@ public class CouponDTO {
     private Integer price;
     private String description;
     private int quantity;
+    private boolean paymentSuccessful;
     private boolean isDeleted;
 }

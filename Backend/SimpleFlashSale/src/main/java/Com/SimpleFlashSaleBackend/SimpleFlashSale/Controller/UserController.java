@@ -30,15 +30,30 @@ public class UserController {
 
     // ✅ User Login (Retrieve Token)
     @PostMapping("/login")
-    public ResponseEntity<Response<String>> login(@RequestParam String username, @RequestParam String password) {
-        Response<String> response = userService.login(username, password);
+    public ResponseEntity<Response<String>> login(@RequestBody UserDTO userDTO) {
+        Response<String> response = userService.login(userDTO.getUsername(), userDTO.getPassword());
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Response<String>> logout(@RequestHeader("Authorization") String token) {
+        Response<String> response = userService.logout(token);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
+    }
+
+    // ✅ Get user profile by ID (Protected)
+    @GetMapping("/{userId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Response<UserDTO>> getUserProfile(@PathVariable String userId) {
+        Response<UserDTO> response = userService.getUserProfile(userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     // ✅ Get user coupons (Protected)
     @GetMapping("/{userId}/coupons")
     @PreAuthorize("isAuthenticated()") // Requires authentication
-    public ResponseEntity<Response<List<CouponDTO>>> getUserCoupons(@PathVariable Long userId) {
+    public ResponseEntity<Response<List<CouponDTO>>> getUserCoupons(@PathVariable String userId) {
         Response<List<CouponDTO>> response = userService.getUserCoupons(userId);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
