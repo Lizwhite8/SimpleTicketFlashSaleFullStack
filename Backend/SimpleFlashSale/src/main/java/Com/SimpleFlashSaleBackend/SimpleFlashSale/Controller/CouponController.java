@@ -24,34 +24,37 @@ public class CouponController {
     }
 
     // 创建购物券
-    @PostMapping
-    public ResponseEntity<CouponDTO> createCoupon(@RequestBody @Valid CouponDTO dto) {
-        return ResponseEntity.ok(couponService.createCoupon(dto));
+    @PostMapping("/")
+    public ResponseEntity<Response<CouponDTO>> createCoupon(@RequestBody @Valid CouponDTO dto) {
+        Response<CouponDTO> response = couponService.createCoupon(dto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     // ✅ 获取所有购物券
     @GetMapping
-    public ResponseEntity<List<CouponDTO>> getAllCoupons() {
-        return ResponseEntity.ok(couponService.getAllCoupons());
+    public ResponseEntity<Response<List<CouponDTO>>> getAllCoupons() {
+        Response<List<CouponDTO>> response = couponService.getAllCoupons();
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    // ✅ 按名称搜索购物券
+    // ✅ Search coupons by name
     @GetMapping("/search")
-    public ResponseEntity<List<CouponDTO>> searchCoupons(@RequestParam String name) {
-        return ResponseEntity.ok(couponService.searchCoupons(name));
+    public ResponseEntity<Response<List<CouponDTO>>> searchCoupons(@RequestParam String name) {
+        Response<List<CouponDTO>> response = couponService.searchCoupons(name);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    // ✅ 更新购物券
+
     @PutMapping("/{id}")
-    public ResponseEntity<CouponDTO> updateCoupon(@PathVariable Long id, @RequestBody @Valid CouponDTO dto) {
-        return ResponseEntity.ok(couponService.updateCoupon(id, dto));
+    public ResponseEntity<Response<CouponDTO>> updateCoupon(@PathVariable Long id, @RequestBody @Valid CouponDTO dto) {
+        Response<CouponDTO> response = couponService.updateCoupon(id, dto);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    // ✅ 删除购物券
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCoupon(@PathVariable Long id) {
-        couponService.deleteCoupon(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Response<CouponDTO>> deleteCoupon(@PathVariable Long id) {
+        Response<CouponDTO> response = couponService.deleteCoupon(id);
+        return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
     // ✅ 购买购物券 (Protected Route)
