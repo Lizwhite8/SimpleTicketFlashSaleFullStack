@@ -11,6 +11,7 @@ import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserCouponRepositor
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Response.Response;
 
+import com.github.benmanes.caffeine.cache.Cache;
 import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
 import org.redisson.api.RScript;
@@ -43,6 +44,8 @@ public class CouponService {
     private final UserRepository userRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
+    private final Cache<String, List<CouponDTO>> localCouponCache;
+
     private static final Logger logger = LoggerFactory.getLogger(CouponService.class);
 
     private static final String COUPON_CACHE_PREFIX = "SimpleFlashSale#coupon:";
@@ -52,11 +55,12 @@ public class CouponService {
     private String paymentTopic;
 
     public CouponService(CouponRepository couponRepository, RedissonClient redissonClient,
-                         UserRepository userRepository, KafkaTemplate<String, String> kafkaTemplate) {
+                         UserRepository userRepository, KafkaTemplate<String, String> kafkaTemplate, Cache<String, List<CouponDTO>> localCouponCache) {
         this.couponRepository = couponRepository;
         this.redissonClient = redissonClient;
         this.userRepository = userRepository;
         this.kafkaTemplate = kafkaTemplate;
+        this.localCouponCache = localCouponCache;
     }
 
     /** Create Coupon & Update Redis with Lock */
@@ -95,28 +99,27 @@ public class CouponService {
     }
 
     public Response<List<CouponDTO>> getCouponsPaginated(int page, int size) {
-        String redisKey = COUPON_CACHE_PREFIX + "page:" + page + ":size:" + size;
-        RBucket<List<CouponDTO>> couponCache = redissonClient.getBucket(redisKey);
+        String cacheKey = COUPON_CACHE_PREFIX + "page:" + page + ":size:" + size;
 
-        // Try fetching from Redis first
-        List<CouponDTO> cachedCoupons = couponCache.get();
-        if (cachedCoupons != null) {
-            logger.info("✅ Coupons fetched from Redis for page {}: {}", page, cachedCoupons.size());
-
-            // Replace quantity with the latest value from Redis if it exists
-//            for (CouponDTO coupon : cachedCoupons) {
-//                String couponQuantityKey = COUPON_CACHE_PREFIX + coupon.getId() + ":quantity";
-//                RBucket<String> quantityCache = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
-//                String redisQuantity = quantityCache.get();
-//                if (redisQuantity != null) {
-//                    coupon.setQuantity(Integer.parseInt(redisQuantity));
-//                }
-//            }
-
-            return new Response<>(200, "Coupons retrieved successfully from cache!", cachedCoupons);
+        // **1️⃣ Try fetching from Caffeine Cache first**
+        List<CouponDTO> localCachedCoupons = localCouponCache.getIfPresent(cacheKey);
+        if (localCachedCoupons != null) {
+            logger.info("✅ Coupons fetched from Caffeine cache for page {}: {}", page, localCachedCoupons.size());
+            return new Response<>(200, "Coupons retrieved successfully from local cache!", localCachedCoupons);
         }
 
-        // Prevent cache breakdown using lock
+        // **2️⃣ Try fetching from Redis**
+        RBucket<List<CouponDTO>> redisCache = redissonClient.getBucket(cacheKey);
+        List<CouponDTO> redisCachedCoupons = redisCache.get();
+        if (redisCachedCoupons != null) {
+            logger.info("✅ Coupons fetched from Redis for page {}: {}", page, redisCachedCoupons.size());
+
+            // Store in Caffeine cache before returning
+            localCouponCache.put(cacheKey, redisCachedCoupons);
+            return new Response<>(200, "Coupons retrieved successfully from Redis!", redisCachedCoupons);
+        }
+
+        // **3️⃣ Prevent cache breakdown using Redis lock**
         RLock lock = redissonClient.getLock(COUPON_UPDATE_LOCK);
         if (!lock.tryLock()) {
             return new Response<>(500, "Another process is updating the cache. Try again later.", null);
@@ -135,7 +138,7 @@ public class CouponService {
                 return new Response<>(404, "No coupons available.", Collections.emptyList());
             }
 
-            // Replace quantity with Redis value if available
+            // **4️⃣ Replace quantity with Redis value if available**
             for (CouponDTO coupon : coupons) {
                 String couponQuantityKey = COUPON_CACHE_PREFIX + coupon.getId() + ":quantity";
                 RBucket<String> quantityCache = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
@@ -148,9 +151,10 @@ public class CouponService {
                 }
             }
 
-            // Store the paginated result in Redis with a TTL (e.g., 5 minutes)
-            couponCache.set(coupons, 2, TimeUnit.MINUTES);
-            logger.info("✅ Coupons stored in Redis for page {}.", page);
+            // **5️⃣ Store data in Caffeine (local) and Redis (distributed)**
+            localCouponCache.put(cacheKey, coupons);
+            redisCache.set(coupons, 2, TimeUnit.MINUTES);
+            logger.info("✅ Coupons stored in Redis & Caffeine for page {}.", page);
 
             return new Response<>(200, "Coupons retrieved successfully!", coupons);
         } finally {
