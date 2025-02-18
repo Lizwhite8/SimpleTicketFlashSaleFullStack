@@ -10,12 +10,16 @@ import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.CouponRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserCouponRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Response.Response;
+
 import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +31,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,7 +66,7 @@ public class CouponService {
 
         // If another process holds the lock, return 500 response instead of throwing an error
         if (!lock.tryLock()) {
-            return new Response<>(500, "⚠️ Another process is updating coupons. Try again later.", null);
+            return new Response<>(500, "Another process is updating coupons. Try again later.", null);
         }
 
         try {
@@ -69,12 +74,11 @@ public class CouponService {
             Coupon savedCoupon = couponRepository.save(coupon);
             updateCouponInCache(savedCoupon);
 
-            return new Response<>(200, "✅ Coupon created successfully!", CouponMapper.toDTO(savedCoupon));
+            return new Response<>(200, "Coupon created successfully!", CouponMapper.toDTO(savedCoupon));
         } finally {
             lock.unlock();
         }
     }
-
 
     // 按名称搜索购物券
     public Response<List<CouponDTO>> searchCoupons(String name) {
@@ -90,19 +94,69 @@ public class CouponService {
         return new Response<>(200, "Coupons retrieved successfully!", coupons);
     }
 
-    public Response<List<CouponDTO>> getAllCoupons() {
-        List<CouponDTO> coupons = couponRepository.findAll()
-                .stream()
-                .map(CouponMapper::toDTO)
-                .collect(Collectors.toList());
+    public Response<List<CouponDTO>> getCouponsPaginated(int page, int size) {
+        String redisKey = COUPON_CACHE_PREFIX + "page:" + page + ":size:" + size;
+        RBucket<List<CouponDTO>> couponCache = redissonClient.getBucket(redisKey);
 
-        if (coupons.isEmpty()) {
-            return new Response<>(404, "No coupons available.", Collections.emptyList());
+        // Try fetching from Redis first
+        List<CouponDTO> cachedCoupons = couponCache.get();
+        if (cachedCoupons != null) {
+            logger.info("✅ Coupons fetched from Redis for page {}: {}", page, cachedCoupons.size());
+
+            // Replace quantity with the latest value from Redis if it exists
+            for (CouponDTO coupon : cachedCoupons) {
+                String couponQuantityKey = COUPON_CACHE_PREFIX + coupon.getId() + ":quantity";
+                RBucket<String> quantityCache = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
+                String redisQuantity = quantityCache.get();
+                if (redisQuantity != null) {
+                    coupon.setQuantity(Integer.parseInt(redisQuantity));
+                }
+            }
+
+            return new Response<>(200, "Coupons retrieved successfully from cache!", cachedCoupons);
         }
 
-        return new Response<>(200, "Coupons retrieved successfully!", coupons);
-    }
+        // Prevent cache breakdown using lock
+        RLock lock = redissonClient.getLock(COUPON_UPDATE_LOCK);
+        if (!lock.tryLock()) {
+            return new Response<>(500, "Another process is updating the cache. Try again later.", null);
+        }
 
+        try {
+            logger.warn("⚠️ Coupons not found in Redis, fetching from MySQL...");
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Coupon> couponPage = couponRepository.findByIsDeletedFalse(pageable);
+
+            List<CouponDTO> coupons = couponPage.getContent().stream()
+                    .map(CouponMapper::toDTO)
+                    .collect(Collectors.toList());
+
+            if (coupons.isEmpty()) {
+                return new Response<>(404, "No coupons available.", Collections.emptyList());
+            }
+
+            // Replace quantity with Redis value if available
+            for (CouponDTO coupon : coupons) {
+                String couponQuantityKey = COUPON_CACHE_PREFIX + coupon.getId() + ":quantity";
+                RBucket<String> quantityCache = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
+                String redisQuantity = quantityCache.get();
+                if (redisQuantity != null) {
+                    coupon.setQuantity(Integer.parseInt(redisQuantity));
+                } else {
+                    // If Redis doesn't have quantity, update Redis with DB value
+                    quantityCache.set(String.valueOf(coupon.getQuantity()), 5, TimeUnit.MINUTES);
+                }
+            }
+
+            // Store the paginated result in Redis with a TTL (e.g., 5 minutes)
+            couponCache.set(coupons, 10, TimeUnit.MINUTES);
+            logger.info("✅ Coupons stored in Redis for page {}.", page);
+
+            return new Response<>(200, "Coupons retrieved successfully!", coupons);
+        } finally {
+            lock.unlock();
+        }
+    }
 
     /** Update Coupon & Sync with Redis using Lock */
     @Transactional
@@ -192,15 +246,15 @@ public class CouponService {
         String redisKey = COUPON_CACHE_PREFIX + coupon.getId();
         String quantityKey = redisKey + ":quantity";
 
-        RBucket<Coupon> couponCache = redissonClient.getBucket(redisKey);
+//        RBucket<Coupon> couponCache = redissonClient.getBucket(redisKey);
         RBucket<String> quantityCache = redissonClient.getBucket(quantityKey, StringCodec.INSTANCE);
 
         if (!coupon.isDeleted()) {
-            couponCache.set(coupon);
+//            couponCache.set(coupon);
             quantityCache.set(String.valueOf(coupon.getQuantity()));
             logger.info("✅ Coupon stored in Redis: {}, Quantity: {}", coupon, coupon.getQuantity());
         } else {
-            couponCache.delete();
+//            couponCache.delete();
             quantityCache.delete();
             logger.info("❌ Coupon deleted from Redis: {}", coupon.getId());
         }

@@ -17,7 +17,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()    // Allow login & registration
                         .requestMatchers("/api/public/**").permitAll()  // Allow public endpoints
-                        .requestMatchers("/api/coupons/buy").authenticated() // Require login for buying coupons
+//                        .requestMatchers("/api/coupons/buy").authenticated() // Require login for buying coupons
                         .requestMatchers("/api/users/{userId}/coupons").authenticated() // Require login for viewing user coupons
                         .anyRequest().permitAll() // 🔥 Everything else is public
                 )

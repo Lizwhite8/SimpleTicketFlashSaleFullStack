@@ -23,7 +23,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private Float credit;
 
     // Define relationship with coupons (Many-to-Many)

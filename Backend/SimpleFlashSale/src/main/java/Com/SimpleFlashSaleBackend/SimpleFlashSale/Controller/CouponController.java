@@ -24,18 +24,21 @@ public class CouponController {
     }
 
     // 创建购物券
-    @PostMapping("/")
+    @PostMapping
     public ResponseEntity<Response<CouponDTO>> createCoupon(@RequestBody @Valid CouponDTO dto) {
         Response<CouponDTO> response = couponService.createCoupon(dto);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
 
-    // ✅ 获取所有购物券
     @GetMapping
-    public ResponseEntity<Response<List<CouponDTO>>> getAllCoupons() {
-        Response<List<CouponDTO>> response = couponService.getAllCoupons();
+    public ResponseEntity<Response<List<CouponDTO>>> getCouponsPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size) {
+
+        Response<List<CouponDTO>> response = couponService.getCouponsPaginated(page, size);
         return ResponseEntity.status(response.getStatusCode()).body(response);
     }
+
 
     // ✅ Search coupons by name
     @GetMapping("/search")
@@ -59,7 +62,7 @@ public class CouponController {
 
     // ✅ 购买购物券 (Protected Route)
     @PostMapping("/buy")
-    @PreAuthorize("isAuthenticated()")
+//    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Response<String>> buyCoupon(@RequestParam Long userId, @RequestParam Long couponId) {
         Response<String> response = couponService.buyCoupon(userId, couponId);
 
