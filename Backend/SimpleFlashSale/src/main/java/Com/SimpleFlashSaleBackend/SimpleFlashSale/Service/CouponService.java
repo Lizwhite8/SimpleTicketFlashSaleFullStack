@@ -104,14 +104,14 @@ public class CouponService {
             logger.info("✅ Coupons fetched from Redis for page {}: {}", page, cachedCoupons.size());
 
             // Replace quantity with the latest value from Redis if it exists
-            for (CouponDTO coupon : cachedCoupons) {
-                String couponQuantityKey = COUPON_CACHE_PREFIX + coupon.getId() + ":quantity";
-                RBucket<String> quantityCache = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
-                String redisQuantity = quantityCache.get();
-                if (redisQuantity != null) {
-                    coupon.setQuantity(Integer.parseInt(redisQuantity));
-                }
-            }
+//            for (CouponDTO coupon : cachedCoupons) {
+//                String couponQuantityKey = COUPON_CACHE_PREFIX + coupon.getId() + ":quantity";
+//                RBucket<String> quantityCache = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
+//                String redisQuantity = quantityCache.get();
+//                if (redisQuantity != null) {
+//                    coupon.setQuantity(Integer.parseInt(redisQuantity));
+//                }
+//            }
 
             return new Response<>(200, "Coupons retrieved successfully from cache!", cachedCoupons);
         }
@@ -149,7 +149,7 @@ public class CouponService {
             }
 
             // Store the paginated result in Redis with a TTL (e.g., 5 minutes)
-            couponCache.set(coupons, 10, TimeUnit.MINUTES);
+            couponCache.set(coupons, 2, TimeUnit.MINUTES);
             logger.info("✅ Coupons stored in Redis for page {}.", page);
 
             return new Response<>(200, "Coupons retrieved successfully!", coupons);
