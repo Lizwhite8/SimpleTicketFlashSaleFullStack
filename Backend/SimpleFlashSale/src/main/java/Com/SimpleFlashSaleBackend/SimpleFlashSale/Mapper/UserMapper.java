@@ -18,6 +18,7 @@ public class UserMapper {
                 user.getUsername(),
                 user.getEmail(),
                 null, // Password should not be exposed in DTO
+                user.getCredit(),
                 user.getUserCoupons().stream()
                         .map(userCoupon -> userCoupon.getCoupon().getId())
                         .collect(Collectors.toSet())
@@ -33,6 +34,7 @@ public class UserMapper {
         user.setId(dto.getId());
         user.setUsername(dto.getUsername());
         user.setEmail(dto.getEmail());
+        user.setCredit(dto.getCredit());
         return user; // Coupon relationships will be handled separately
     }
 }

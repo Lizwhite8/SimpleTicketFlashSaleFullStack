@@ -29,6 +29,7 @@ public class UserService {
         keycloakService.registerUser(userDTO);
 
         // Save user in database
+        userDTO.setCredit((float)100);
         User user = UserMapper.toEntity(userDTO);
         User savedUser = userRepository.save(user);
 

@@ -30,3 +30,8 @@ keycloak:
 
 redis:
   url: redis://localhost:6379
+
+kafka:
+  bootstrap-servers: localhost:9092
+  topic:
+    payment: "payment_orders"

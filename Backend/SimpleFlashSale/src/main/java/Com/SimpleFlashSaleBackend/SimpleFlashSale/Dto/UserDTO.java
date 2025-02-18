@@ -12,5 +12,6 @@ public class UserDTO {
     private String username;
     private String email;
     private String password;
+    private Float credit;
     private Set<Long> couponIds; // Store IDs of purchased coupons
 }

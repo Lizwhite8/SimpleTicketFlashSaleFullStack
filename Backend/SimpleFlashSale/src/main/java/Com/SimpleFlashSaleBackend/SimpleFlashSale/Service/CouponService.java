@@ -14,6 +14,8 @@ import org.redisson.api.RBucket;
 import org.redisson.api.RScript;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,14 +39,21 @@ public class CouponService {
     private final RedissonClient redissonClient;
     private final UserRepository userRepository;
 
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
     private static final Logger logger = LoggerFactory.getLogger(CouponService.class);
 
     private static final String COUPON_CACHE_PREFIX = "SimpleFlashSale#coupon:";
 
-    public CouponService(CouponRepository couponRepository, RedissonClient redissonClient, UserRepository userRepository) {
+    @Value("${kafka.topic.payment}")
+    private String paymentTopic;
+
+    public CouponService(CouponRepository couponRepository, RedissonClient redissonClient,
+                         UserRepository userRepository, KafkaTemplate<String, String> kafkaTemplate) {
         this.couponRepository = couponRepository;
         this.redissonClient = redissonClient;
         this.userRepository = userRepository;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     /** Create Coupon & Update Redis */
@@ -133,7 +142,7 @@ public class CouponService {
         String userOrderSetKey = "SimpleFlashSale#couponUsers:" + couponId;
 
         RBucket<String> quantityBucket = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
-        String redisValue = quantityBucket.get();  // Read as string
+        String redisValue = quantityBucket.get();
         logger.info("📌 Redis Value for {}: {}", couponQuantityKey, redisValue);
 
         RScript script = redissonClient.getScript();
@@ -143,7 +152,6 @@ public class CouponService {
         String luaScript = loadLuaScript("LuaScript/buy_coupon.lua");
         Long result = script.eval(RScript.Mode.READ_WRITE, luaScript, RScript.ReturnType.INTEGER, keys, args);
 
-        // Handle different responses
         if (result == -1) {
             return new Response<>(400, "Coupon out of stock!", null);
         }
@@ -154,9 +162,13 @@ public class CouponService {
             return new Response<>(500, "⚠️ Redis returned a non-integer for quantity!", null);
         }
 
+        long orderId = System.currentTimeMillis();
+        String orderMessage = orderId + "," + userId + "," + couponId;
+        kafkaTemplate.send(paymentTopic, orderMessage);
+        logger.info("✅ Order sent to Kafka: {}", orderMessage);
+
         return new Response<>(200, "Order placed successfully!", "Success");
     }
-
     public String loadLuaScript(String scriptPath) {
         try (InputStream inputStream = getClass().getClassLoader().getResourceAsStream(scriptPath)) {
             if (inputStream == null) {
