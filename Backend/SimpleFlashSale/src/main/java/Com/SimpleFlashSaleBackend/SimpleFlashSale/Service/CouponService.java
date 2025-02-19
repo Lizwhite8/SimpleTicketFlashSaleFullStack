@@ -250,7 +250,7 @@ public class CouponService {
         logger.info("📢 Order sent to Kafka: {}", orderMessage);
 
         // ✅ Notify frontend about order placement
-        orderStatusWebSocketHandler.sendOrderUpdate(orderId.toString(), "Order placed! Waiting for payment processing...");
+//        orderStatusWebSocketHandler.sendOrderUpdate(orderId.toString(), "Order placed! Waiting for payment processing...");
         return new Response<>(200, "Order placed successfully!", orderId.toString());
     }
 

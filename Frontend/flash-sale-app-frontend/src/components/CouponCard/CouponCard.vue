@@ -14,10 +14,9 @@
         </button>
       </div>
     </div>
+    <!-- Snackbar Component -->
+    <Snackbar ref="snackbar" />
   </div>
-
-  <!-- Snackbar Component -->
-  <Snackbar ref="snackbar" />
 </template>
 
 <script>
@@ -29,19 +28,19 @@ export default {
   data() {
     return {
       stompClient: null,
-      orderStatus: null,
-      reconnectAttempts: 0, // Track reconnection attempts
+      reconnectAttempts: 0,
+      snackbarQueue: [], // ✅ Queue to handle snackbar messages
+      snackbarTimeout: null, // ✅ Timeout for sequential display
     };
   },
   methods: {
     async buyCoupon() {
       if (!this.user) {
-        this.$refs.snackbar.showMessage("Please login first.", "red", 3000);
+        this.queueSnackbar("Please login first.", "red", 3000);
         return;
       }
 
       try {
-        // ✅ Convert data to x-www-form-urlencoded format
         const formData = new URLSearchParams();
         formData.append("userId", this.user.id);
         formData.append("couponId", this.coupon.id);
@@ -63,18 +62,14 @@ export default {
 
         const data = await response.json();
         if (data.data) {
-          this.$refs.snackbar.showMessage("Order placed successfully!", "green", 2000);
+          this.queueSnackbar("Order placed! Waiting for payment processing...", "green", 2000);
           this.initializeWebSocket(data.data);
         } else {
           throw new Error("Order ID missing from response");
         }
       } catch (error) {
         console.error("Error purchasing coupon:", error);
-        this.$refs.snackbar.showMessage(
-          `Error: ${JSON.parse(error.message).message}`,
-          "red",
-          3000
-        );
+        this.queueSnackbar(`Error: ${JSON.parse(error.message).message}`, "red", 3000);
       }
     },
 
@@ -89,20 +84,21 @@ export default {
       };
 
       socket.onmessage = (event) => {
-        console.log("🔥 Message Received from WebSocket:", event.data);
-        try {
-          const orderStatus = JSON.parse(event.data);
-          console.log("✅ Order Update (Parsed as JSON):", orderStatus);
-          this.$refs.snackbar.showMessage(`Order Update: ${orderStatus.message}`, "blue", 2500);
-        } catch (error) {
-          console.warn("⚠️ Received non-JSON message, extracting status only.");
+        setTimeout(() => {
+          console.log("🔥 Message Received from WebSocket:", event.data);
+          try {
+            const orderStatus = JSON.parse(event.data);
+            this.queueSnackbar(orderStatus.message, "blue", 2000);
+          } catch (error) {
+            console.warn("⚠️ Received non-JSON message, extracting status only.");
 
-          const statusMatch = event.data.match(/update: (.*)$/);
-          const statusMessage = statusMatch ? statusMatch[1] : event.data;
+            const statusMatch = event.data.match(/update: (.*)$/);
+            const statusMessage = statusMatch ? statusMatch[1] : event.data;
 
-          console.log("✅ Extracted Status Message:", statusMessage);
-          this.$refs.snackbar.showMessage(statusMessage, "blue", 2500);
-        }
+            console.log("✅ Extracted Status Message:", statusMessage);
+            this.queueSnackbar(statusMessage, "blue", 2000);
+          }
+        }, 500);
       };
 
       socket.onerror = (error) => {
@@ -120,7 +116,7 @@ export default {
 
     handleWebSocketReconnect(orderId) {
       const maxAttempts = 5;
-      const delay = Math.min(5000, Math.pow(2, this.reconnectAttempts) * 1000); // Exponential backoff
+      const delay = Math.min(5000, Math.pow(2, this.reconnectAttempts) * 1000);
 
       if (this.reconnectAttempts < maxAttempts) {
         console.warn(`🔁 Retrying WebSocket connection in ${delay / 1000}s...`);
@@ -133,24 +129,23 @@ export default {
       }
     },
 
-    subscribeToOrderStatus(orderId) {
-      if (this.stompClient && this.stompClient.connected) {
-        console.log("✅ Subscribing to:", `/topic/order-status/${orderId}`);
+    // ✅ Queue Snackbar Messages to Avoid Overlapping
+    queueSnackbar(message, color, duration) {
+      this.snackbarQueue.push({ message, color, duration });
+      if (!this.snackbarTimeout) {
+        this.showNextSnackbar();
+      }
+    },
 
-        this.stompClient.subscribe(`/topic/order-status/${orderId}`, (message) => {
-          console.log("🔥 Message Received from WebSocket:", message);
+    showNextSnackbar() {
+      if (this.snackbarQueue.length > 0 && this.$refs.snackbar) {
+        const { message, color, duration } = this.snackbarQueue.shift();
+        this.$refs.snackbar.showMessage(message, color, duration);
 
-          try {
-            const orderStatus = JSON.parse(message.body);
-            console.log("✅ Order Update:", orderStatus);
-            this.$refs.snackbar.showMessage(`Order Update: ${orderStatus}`, "blue", 3000);
-          } catch (error) {
-            console.error("❌ Error parsing WebSocket message:", error);
-          }
-        });
-      } else {
-        console.warn("⚠️ WebSocket not connected. Retrying...");
-        setTimeout(() => this.subscribeToOrderStatus(orderId), 2000);
+        this.snackbarTimeout = setTimeout(() => {
+          this.snackbarTimeout = null;
+          this.showNextSnackbar();
+        }, duration + 500); // 500ms delay to avoid overlap
       }
     },
   },
@@ -158,6 +153,9 @@ export default {
     if (this.stompClient) {
       this.stompClient.close();
       console.log("🔌 WebSocket disconnected.");
+    }
+    if (this.snackbarTimeout) {
+      clearTimeout(this.snackbarTimeout);
     }
   },
 };
