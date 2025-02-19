@@ -66,7 +66,7 @@ public class PaymentService {
             publishToRedis(serverId, orderId.toString(), "Payment processing started...");
 
             // Simulate a payment delay
-            Thread.sleep(2000);
+            Thread.sleep(3000);
 
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));

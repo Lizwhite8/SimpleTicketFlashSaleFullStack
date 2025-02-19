@@ -63,7 +63,7 @@ public class CouponController {
     // ✅ 购买购物券 (Protected Route)
     @PostMapping("/buy")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Response<String>> buyCoupon(@RequestParam String userId, @RequestParam Long couponId) {
+    public ResponseEntity<Response<String>> buyCoupon(@RequestParam String userId, @RequestParam Long couponId) throws InterruptedException {
         Response<String> response = couponService.buyCoupon(userId, couponId);
 
         HttpStatus status = (response.getStatusCode() == 200) ? HttpStatus.OK : HttpStatus.BAD_REQUEST;

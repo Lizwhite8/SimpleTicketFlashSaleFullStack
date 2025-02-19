@@ -219,7 +219,7 @@ public class CouponService {
 
     /** Buy Coupon Using Redis & Lua Script */
     @Transactional
-    public Response<String> buyCoupon(String userId, Long couponId) {
+    public Response<String> buyCoupon(String userId, Long couponId) throws InterruptedException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
@@ -251,7 +251,6 @@ public class CouponService {
 
         // ✅ Notify frontend about order placement
         orderStatusWebSocketHandler.sendOrderUpdate(orderId.toString(), "Order placed! Waiting for payment processing...");
-
         return new Response<>(200, "Order placed successfully!", orderId.toString());
     }
 

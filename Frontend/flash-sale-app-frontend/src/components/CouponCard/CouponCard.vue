@@ -1,10 +1,6 @@
 <template>
   <div class="card d-flex flex-row p-3 m-2">
-    <img
-      :src="coupon.imageURL"
-      class="img-fluid"
-      style="width: 150px; height: 150px; object-fit: cover"
-    />
+    <img :src="coupon.imageURL" class="img-fluid" style="width: 150px; height: 150px; object-fit: cover" />
     <div class="d-flex flex-column flex-grow-1 ms-3">
       <h5>{{ coupon.name }}</h5>
       <p class="text-muted">{{ coupon.description }}</p>
@@ -13,12 +9,7 @@
           <strong>Price:</strong> 💰{{ coupon.price }} | <strong>Qty:</strong>
           {{ coupon.quantity }}
         </p>
-        <button
-          class="btn btn-primary"
-          style="min-width: 100px"
-          @click="buyCoupon"
-          :disabled="!user"
-        >
+        <button class="btn btn-primary" style="min-width: 100px" @click="buyCoupon" :disabled="!user">
           Buy
         </button>
       </div>
@@ -30,8 +21,6 @@
 </template>
 
 <script>
-import SockJS from "sockjs-client";
-import Stomp from "stompjs";
 import Snackbar from "../Snackbar/Snackbar.vue";
 
 export default {
@@ -74,8 +63,8 @@ export default {
 
         const data = await response.json();
         if (data.data) {
-          this.$refs.snackbar.showMessage("Order placed successfully!", "green", 3000);
-          this.initializeWebSocket(data.data); // ✅ Pass orderId to WebSocket initialization
+          this.$refs.snackbar.showMessage("Order placed successfully!", "green", 2000);
+          this.initializeWebSocket(data.data);
         } else {
           throw new Error("Order ID missing from response");
         }
@@ -90,27 +79,43 @@ export default {
     },
 
     initializeWebSocket(orderId) {
-      console.log("🔄 Initializing WebSocket...");
+      console.log("🔄 Initializing Native WebSocket...");
 
-      let socket = new SockJS("http://localhost:8080/ws/orders", null, {
-        transports: ["websocket"], // ✅ Force WebSocket only
-      });
+      const socket = new WebSocket(`ws://localhost:8080/ws/orders/${orderId}`);
 
-      this.stompClient = Stomp.over(socket);
-      this.stompClient.debug = console.log; // ✅ Enable debugging
+      socket.onopen = () => {
+        console.log("✅ WebSocket connected!");
+        this.reconnectAttempts = 0;
+      };
 
-      this.stompClient.connect(
-        {},
-        () => {
-          console.log("✅ WebSocket connected!");
-          this.reconnectAttempts = 0;
-          this.subscribeToOrderStatus(orderId);
-        },
-        (error) => {
-          console.error("⚠️ WebSocket connection failed:", error);
-          this.handleWebSocketReconnect(orderId);
+      socket.onmessage = (event) => {
+        console.log("🔥 Message Received from WebSocket:", event.data);
+        try {
+          const orderStatus = JSON.parse(event.data);
+          console.log("✅ Order Update (Parsed as JSON):", orderStatus);
+          this.$refs.snackbar.showMessage(`Order Update: ${orderStatus.message}`, "blue", 2500);
+        } catch (error) {
+          console.warn("⚠️ Received non-JSON message, extracting status only.");
+
+          const statusMatch = event.data.match(/update: (.*)$/);
+          const statusMessage = statusMatch ? statusMatch[1] : event.data;
+
+          console.log("✅ Extracted Status Message:", statusMessage);
+          this.$refs.snackbar.showMessage(statusMessage, "blue", 2500);
         }
-      );
+      };
+
+      socket.onerror = (error) => {
+        console.error("⚠️ WebSocket error:", error);
+        this.handleWebSocketReconnect(orderId);
+      };
+
+      socket.onclose = () => {
+        console.warn("🔌 WebSocket closed. Attempting to reconnect...");
+        this.handleWebSocketReconnect(orderId);
+      };
+
+      this.stompClient = socket;
     },
 
     handleWebSocketReconnect(orderId) {
@@ -151,7 +156,7 @@ export default {
   },
   beforeUnmount() {
     if (this.stompClient) {
-      this.stompClient.disconnect();
+      this.stompClient.close();
       console.log("🔌 WebSocket disconnected.");
     }
   },
