@@ -28,7 +28,8 @@
     <!-- Coupons List -->
     <div>
       <CouponCard v-for="coupon in coupons" :key="coupon.id" :coupon="coupon" :user="user"
-        @refresh-user-data="refreshUserData" />
+        :purchasedCoupons="purchasedCoupons" @update-purchased-coupons="fetchPurchasedCoupons"
+        @update-user-credit="fetchUserCredit" />
     </div>
 
     <!-- Footer -->
@@ -51,73 +52,56 @@ export default {
     return {
       user: null,
       coupons: [],
-      showCouponsPopup: false, // Controls modal visibility
-      token: null, // Store token
+      purchasedCoupons: [],
+      showCouponsPopup: false,
+      token: null,
     };
   },
 
   async mounted() {
-    try {
-      // ✅ Retain user session on refresh
-      this.restoreSession();
-
-      // ✅ Fetch coupons
-      const response = await fetch("http://localhost:8080/api/coupons?page=0&size=8");
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const jsonData = await response.json();
-      this.coupons = jsonData.data || [];
-      console.log("Coupons fetched:", this.coupons);
-    } catch (error) {
-      console.error("Error fetching coupons:", error);
-    }
+    this.restoreSession();
+    this.fetchCoupons();
   },
 
   methods: {
     async setUser(loginResponse) {
-      if (!loginResponse || !loginResponse.data) {
-        console.error("Invalid login response:", loginResponse);
+      // console.log(loginResponse);
+      if (!loginResponse || !loginResponse.data || typeof loginResponse.data !== "string") {
         return;
       }
 
+      this.token = loginResponse.data.trim(); // ✅ Ensure token is a string
+      localStorage.setItem("token", this.token);
+
       try {
-        this.token = loginResponse.data;
-        localStorage.setItem("token", this.token);
-
-        // Decode JWT to get userId
+        // ✅ Decode JWT Safely
+        console.log(this.token);
         const tokenParts = this.token.split(".");
-        const decodedPayload = JSON.parse(atob(tokenParts[1]));
-        const userId = decodedPayload.sub;
-        localStorage.setItem("userId", userId); // ✅ Store userId in localStorage
+        if (tokenParts.length !== 3) throw new Error("Invalid token format");
 
+        const decodedPayload = JSON.parse(atob(tokenParts[1])); // Decode JWT payload
+        const userId = decodedPayload.sub;
+
+        if (!userId) throw new Error("User ID missing in token");
+
+        localStorage.setItem("userId", userId);
         console.log("🔑 Token & userId stored in localStorage:", userId);
 
-        // ✅ Fetch user profile dynamically
         await this.verifySession(userId);
       } catch (error) {
-        console.error("Error fetching user profile:", error);
+        console.error("Error decoding JWT:", error);
+        this.logout();
       }
     },
 
-    // ✅ Restore session on refresh
     async restoreSession() {
       const storedToken = localStorage.getItem("token");
       const storedUserId = localStorage.getItem("userId");
 
       if (storedToken && storedUserId) {
-        try {
-          this.token = storedToken;
-          console.log("🔄 Session restored. Verifying token...");
-
-          // ✅ Verify token validity
-          await this.verifySession(storedUserId);
-        } catch (error) {
-          console.error("❌ Error restoring session:", error);
-          this.logout(); // ✅ Clear invalid session
-        }
+        this.token = storedToken;
+        console.log("🔄 Restoring session...");
+        await this.verifySession(storedUserId);
       }
     },
 
@@ -133,49 +117,77 @@ export default {
 
         const userData = await response.json();
         this.user = userData.data;
-        console.log("✅ Session verified successfully! User:", this.user);
+        console.log("✅ Session verified:", this.user);
+
+        await this.fetchPurchasedCoupons();
       } catch (error) {
-        console.error("❌ Session invalid, logging out:", error);
-        this.logout(); // ✅ Clear invalid session if request fails
+        console.error("❌ Invalid session:", error);
+        this.logout();
       }
+    },
+
+    async fetchCoupons() {
+      try {
+        const response = await fetch("http://localhost:8080/api/coupons?page=0&size=8");
+        if (!response.ok) throw new Error(`Failed to fetch coupons: ${response.status}`);
+
+        const jsonData = await response.json();
+        this.coupons = jsonData.data || [];
+      } catch (error) {
+        console.error("Error fetching coupons:", error);
+      }
+    },
+
+    async fetchPurchasedCoupons() {
+      if (!this.user) return;
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          `http://localhost:8080/api/users/${this.user.id}/coupons`,
+          { method: "GET", headers: { Authorization: token } }
+        );
+
+        if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
+
+        const data = await response.json();
+        this.purchasedCoupons = data.data
+          .filter(coupon => coupon.paymentSuccessful)
+          .map(coupon => coupon.id);
+
+        console.log("✅ Purchased Coupons Updated:", this.purchasedCoupons);
+      } catch (error) {
+        console.error("❌ Error fetching purchased coupons:", error);
+      }
+    },
+
+    async fetchUserCredit() {
+      if (!this.user) return;
+      try {
+        const response = await fetch(`http://localhost:8080/api/users/${this.user.id}`, {
+          headers: { Authorization: this.token },
+        });
+
+        if (!response.ok) throw new Error(`Failed to fetch user: ${response.status}`);
+
+        const userData = await response.json();
+        this.user.credit = userData.data.credit; // ✅ Update the displayed credit
+        console.log("✅ User credit updated:", this.user.credit);
+      } catch (error) {
+        console.error("❌ Error fetching user credit:", error);
+      }
+    },
+
+    async logout() {
+      localStorage.removeItem("token");
+      localStorage.removeItem("userId");
+      this.user = null;
+      this.token = null;
+      this.purchasedCoupons = [];
+      console.log("🚪 User logged out!");
     },
 
     showUserCoupons() {
       this.showCouponsPopup = true;
-    },
-
-    async logout() {
-      const token = localStorage.getItem("token");
-
-      if (token) {
-        try {
-          const response = await fetch(`http://localhost:8080/api/users/logout`, {
-            method: "POST",
-            headers: { Authorization: token },
-          });
-
-          if (!response.ok) {
-            console.warn("⚠️ Logout request failed. Clearing session anyway.");
-          }
-        } catch (error) {
-          console.error("❌ Error logging out:", error);
-        }
-      }
-
-      // ✅ Always clear session data
-      localStorage.removeItem("token");
-      this.user = null;
-      this.token = null;
-
-      console.log("🚪 User logged out!");
-    },
-
-    refreshUserData() {
-      console.log("🔄 Refreshing user data...");
-      const storedUserId = localStorage.getItem("userId");
-      if (storedUserId) {
-        this.verifySession(storedUserId);
-      }
     },
   },
 };

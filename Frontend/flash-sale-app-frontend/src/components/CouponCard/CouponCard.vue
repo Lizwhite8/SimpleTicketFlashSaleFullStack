@@ -19,7 +19,6 @@
         </button>
       </div>
     </div>
-    <!-- Snackbar Component -->
     <Snackbar ref="snackbar" />
   </div>
 </template>
@@ -29,24 +28,15 @@ import Snackbar from "../Snackbar/Snackbar.vue";
 
 export default {
   components: { Snackbar },
-  props: ["coupon", "user"],
+  props: ["coupon", "user", "purchasedCoupons"],
   data() {
     return {
       stompClient: null,
       reconnectAttempts: 0,
-      snackbarQueue: [], 
-      snackbarTimeout: null, 
-      isProcessing: false, // ✅ Tracks if a payment is being processed
-      purchasedCoupons: [], // ✅ Stores IDs of successfully purchased coupons
+      snackbarQueue: [],
+      snackbarTimeout: null,
+      isProcessing: false, // ✅ Tracks if a purchase is being processed
     };
-  },
-  watch: {
-    // ✅ Whenever the user logs in, fetch purchased coupons
-    user(newUser) {
-      if (newUser) {
-        this.fetchPurchasedCoupons();
-      }
-    }
   },
   methods: {
     async buyCoupon() {
@@ -55,7 +45,7 @@ export default {
         return;
       }
 
-      this.isProcessing = true; // ✅ Disable all Buy buttons
+      this.isProcessing = true; // ✅ Disable all Buy buttons while processing
 
       try {
         const formData = new URLSearchParams();
@@ -86,43 +76,13 @@ export default {
         }
       } catch (error) {
         console.error("Error purchasing coupon:", error);
-        this.queueSnackbar(`Error: ${JSON.parse(error.message).message}`, "red", 3000);
+        this.queueSnackbar(`Error: ${error.message}`, "red", 3000);
         this.isProcessing = false; // ✅ Re-enable buttons if the purchase fails
       }
     },
 
-    async fetchPurchasedCoupons() {
-      try {
-        const token = localStorage.getItem("token");
-        if (!this.user || !token) return;
-
-        const response = await fetch(`http://localhost:8080/api/users/${this.user.id}/coupons`, {
-          method: "GET",
-          headers: {
-            Authorization: token,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch coupons: ${response.status}`);
-        }
-
-        const data = await response.json();
-        this.purchasedCoupons = data.data
-          .filter((coupon) => coupon.paymentSuccessful) // ✅ Keep only successfully purchased coupons
-          .map((coupon) => coupon.id); // ✅ Store their IDs
-
-        console.log("Purchased Coupons:", this.purchasedCoupons);
-      } catch (error) {
-        console.error("Error fetching purchased coupons:", error);
-      } finally {
-        this.isProcessing = false; // ✅ Re-enable buttons once payment status is updated
-      }
-    },
-
     initializeWebSocket(orderId) {
-      console.log("🔄 Initializing Native WebSocket...");
+      console.log("🔄 Initializing WebSocket...");
 
       const socket = new WebSocket(`ws://localhost:8080/ws/orders/${orderId}`);
 
@@ -132,28 +92,26 @@ export default {
       };
 
       socket.onmessage = async (event) => {
-        setTimeout(async () => {
+        setTimeout(() => {
           console.log("🔥 Message Received from WebSocket:", event.data);
           try {
             const orderStatus = JSON.parse(event.data);
             this.queueSnackbar(orderStatus.message, "blue", 2000);
 
             if (orderStatus.message === "Payment successful!") {
-              await this.fetchPurchasedCoupons(); // ✅ Fetch updated purchase status
-              this.$emit("refresh-user-data"); // ✅ Notify parent component to refresh user data
+              this.$emit("update-purchased-coupons"); // ✅ Refresh purchased coupons
+              this.$emit("update-user-credit"); // ✅ Update user credit balance
             }
           } catch (error) {
             console.warn("⚠️ Received non-JSON message, extracting status only.");
-
             const statusMatch = event.data.match(/update: (.*)$/);
             const statusMessage = statusMatch ? statusMatch[1] : event.data;
-
             console.log("✅ Extracted Status Message:", statusMessage);
             this.queueSnackbar(statusMessage, "blue", 2000);
 
             if (statusMessage === "Payment successful!") {
-              await this.fetchPurchasedCoupons();
-              this.$emit("refresh-user-data");
+              this.$emit("update-purchased-coupons");
+              this.$emit("update-user-credit");
             }
           }
         }, 500);
@@ -205,11 +163,6 @@ export default {
         }, duration + 500);
       }
     },
-  },
-  async mounted() {
-    if (this.user) {
-      await this.fetchPurchasedCoupons(); // ✅ Fetch user's purchased coupons when component loads
-    }
   },
   beforeUnmount() {
     if (this.stompClient) {
