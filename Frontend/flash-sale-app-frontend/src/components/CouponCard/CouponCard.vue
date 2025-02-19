@@ -9,7 +9,12 @@
           <strong>Price:</strong> 💰{{ coupon.price }} | <strong>Qty:</strong>
           {{ coupon.quantity }}
         </p>
-        <button class="btn btn-primary" style="min-width: 100px" @click="buyCoupon" :disabled="!user">
+        <button 
+          class="btn btn-primary" 
+          style="min-width: 100px" 
+          @click="buyCoupon" 
+          :disabled="!user || isProcessing || purchasedCoupons.includes(coupon.id)"
+        >
           Buy
         </button>
       </div>
@@ -29,9 +34,19 @@ export default {
     return {
       stompClient: null,
       reconnectAttempts: 0,
-      snackbarQueue: [], // ✅ Queue to handle snackbar messages
-      snackbarTimeout: null, // ✅ Timeout for sequential display
+      snackbarQueue: [], 
+      snackbarTimeout: null, 
+      isProcessing: false, // ✅ Tracks if a payment is being processed
+      purchasedCoupons: [], // ✅ Stores IDs of successfully purchased coupons
     };
+  },
+  watch: {
+    // ✅ Whenever the user logs in, fetch purchased coupons
+    user(newUser) {
+      if (newUser) {
+        this.fetchPurchasedCoupons();
+      }
+    }
   },
   methods: {
     async buyCoupon() {
@@ -39,6 +54,8 @@ export default {
         this.queueSnackbar("Please login first.", "red", 3000);
         return;
       }
+
+      this.isProcessing = true; // ✅ Disable all Buy buttons
 
       try {
         const formData = new URLSearchParams();
@@ -70,6 +87,37 @@ export default {
       } catch (error) {
         console.error("Error purchasing coupon:", error);
         this.queueSnackbar(`Error: ${JSON.parse(error.message).message}`, "red", 3000);
+        this.isProcessing = false; // ✅ Re-enable buttons if the purchase fails
+      }
+    },
+
+    async fetchPurchasedCoupons() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!this.user || !token) return;
+
+        const response = await fetch(`http://localhost:8080/api/users/${this.user.id}/coupons`, {
+          method: "GET",
+          headers: {
+            Authorization: token,
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch coupons: ${response.status}`);
+        }
+
+        const data = await response.json();
+        this.purchasedCoupons = data.data
+          .filter((coupon) => coupon.paymentSuccessful) // ✅ Keep only successfully purchased coupons
+          .map((coupon) => coupon.id); // ✅ Store their IDs
+
+        console.log("Purchased Coupons:", this.purchasedCoupons);
+      } catch (error) {
+        console.error("Error fetching purchased coupons:", error);
+      } finally {
+        this.isProcessing = false; // ✅ Re-enable buttons once payment status is updated
       }
     },
 
@@ -83,18 +131,17 @@ export default {
         this.reconnectAttempts = 0;
       };
 
-      socket.onmessage = (event) => {
-        setTimeout(() => {
+      socket.onmessage = async (event) => {
+        setTimeout(async () => {
           console.log("🔥 Message Received from WebSocket:", event.data);
           try {
             const orderStatus = JSON.parse(event.data);
             this.queueSnackbar(orderStatus.message, "blue", 2000);
 
-            // ✅ Emit event to refresh user data if payment is successful
             if (orderStatus.message === "Payment successful!") {
-              this.$emit("refresh-user-data");
+              await this.fetchPurchasedCoupons(); // ✅ Fetch updated purchase status
+              this.$emit("refresh-user-data"); // ✅ Notify parent component to refresh user data
             }
-
           } catch (error) {
             console.warn("⚠️ Received non-JSON message, extracting status only.");
 
@@ -104,8 +151,8 @@ export default {
             console.log("✅ Extracted Status Message:", statusMessage);
             this.queueSnackbar(statusMessage, "blue", 2000);
 
-            // ✅ Emit event to refresh user data if payment is successful
             if (statusMessage === "Payment successful!") {
+              await this.fetchPurchasedCoupons();
               this.$emit("refresh-user-data");
             }
           }
@@ -140,7 +187,6 @@ export default {
       }
     },
 
-    // ✅ Queue Snackbar Messages to Avoid Overlapping
     queueSnackbar(message, color, duration) {
       this.snackbarQueue.push({ message, color, duration });
       if (!this.snackbarTimeout) {
@@ -156,9 +202,14 @@ export default {
         this.snackbarTimeout = setTimeout(() => {
           this.snackbarTimeout = null;
           this.showNextSnackbar();
-        }, duration + 500); // 500ms delay to avoid overlap
+        }, duration + 500);
       }
     },
+  },
+  async mounted() {
+    if (this.user) {
+      await this.fetchPurchasedCoupons(); // ✅ Fetch user's purchased coupons when component loads
+    }
   },
   beforeUnmount() {
     if (this.stompClient) {

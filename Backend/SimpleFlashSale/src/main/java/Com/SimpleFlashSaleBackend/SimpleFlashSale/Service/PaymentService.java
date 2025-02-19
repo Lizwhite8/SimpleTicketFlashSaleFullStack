@@ -63,7 +63,7 @@ public class PaymentService {
             logger.info("🛒 Processing payment for Order ID: {}", orderId);
 
             // Notify frontend: Payment processing started via Redis Pub/Sub
-            publishToRedis(serverId, orderId.toString(), "Payment processing started...");
+//            publishToRedis(serverId, orderId.toString(), "Payment processing started...");
 
             // Simulate a payment delay
             Thread.sleep(3000);
