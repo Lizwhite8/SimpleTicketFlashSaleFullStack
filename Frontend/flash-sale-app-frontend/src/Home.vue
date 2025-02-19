@@ -5,12 +5,7 @@
 
       <div>
         <!-- Login Button -->
-        <button
-          v-if="!user"
-          class="btn btn-primary"
-          data-bs-toggle="modal"
-          data-bs-target="#loginModal"
-        >
+        <button v-if="!user" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
           Login
         </button>
 
@@ -32,12 +27,8 @@
 
     <!-- Coupons List -->
     <div>
-      <CouponCard
-        v-for="coupon in coupons"
-        :key="coupon.id"
-        :coupon="coupon"
-        :user="user"
-      />
+      <CouponCard v-for="coupon in coupons" :key="coupon.id" :coupon="coupon" :user="user"
+        @refresh-user-data="refreshUserData" />
     </div>
 
     <!-- Footer -->
@@ -45,11 +36,7 @@
 
     <!-- Components -->
     <LoginPopup @login-success="setUser" />
-    <UserCouponsPopup
-      v-if="showCouponsPopup"
-      :user="user"
-      @close="showCouponsPopup = false"
-    />
+    <UserCouponsPopup v-if="showCouponsPopup" :user="user" @close="showCouponsPopup = false" />
   </div>
 </template>
 
@@ -181,6 +168,14 @@ export default {
       this.token = null;
 
       console.log("🚪 User logged out!");
+    },
+
+    refreshUserData() {
+      console.log("🔄 Refreshing user data...");
+      const storedUserId = localStorage.getItem("userId");
+      if (storedUserId) {
+        this.verifySession(storedUserId);
+      }
     },
   },
 };

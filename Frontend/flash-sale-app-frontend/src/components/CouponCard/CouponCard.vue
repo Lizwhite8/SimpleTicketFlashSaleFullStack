@@ -89,6 +89,12 @@ export default {
           try {
             const orderStatus = JSON.parse(event.data);
             this.queueSnackbar(orderStatus.message, "blue", 2000);
+
+            // ✅ Emit event to refresh user data if payment is successful
+            if (orderStatus.message === "Payment successful!") {
+              this.$emit("refresh-user-data");
+            }
+
           } catch (error) {
             console.warn("⚠️ Received non-JSON message, extracting status only.");
 
@@ -97,6 +103,11 @@ export default {
 
             console.log("✅ Extracted Status Message:", statusMessage);
             this.queueSnackbar(statusMessage, "blue", 2000);
+
+            // ✅ Emit event to refresh user data if payment is successful
+            if (statusMessage === "Payment successful!") {
+              this.$emit("refresh-user-data");
+            }
           }
         }, 500);
       };
