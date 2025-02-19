@@ -1,13 +1,12 @@
 package Com.SimpleFlashSaleBackend.SimpleFlashSale.Service;
 
+import Com.SimpleFlashSaleBackend.SimpleFlashSale.Config.OrderStatusWebSocketHandler;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Dto.CouponDTO;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity.Coupon;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity.User;
-import Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity.UserCoupon;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Exception.ResourceNotFoundException;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Mapper.CouponMapper;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.CouponRepository;
-import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserCouponRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Response.Response;
 
@@ -32,6 +31,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -42,6 +42,8 @@ public class CouponService {
     private final CouponRepository couponRepository;
     private final RedissonClient redissonClient;
     private final UserRepository userRepository;
+
+    private final OrderStatusWebSocketHandler orderStatusWebSocketHandler;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
     private final Cache<String, List<CouponDTO>> localCouponCache;
@@ -55,10 +57,11 @@ public class CouponService {
     private String paymentTopic;
 
     public CouponService(CouponRepository couponRepository, RedissonClient redissonClient,
-                         UserRepository userRepository, KafkaTemplate<String, String> kafkaTemplate, Cache<String, List<CouponDTO>> localCouponCache) {
+                         UserRepository userRepository, OrderStatusWebSocketHandler orderStatusWebSocketHandler, KafkaTemplate<String, String> kafkaTemplate, Cache<String, List<CouponDTO>> localCouponCache) {
         this.couponRepository = couponRepository;
         this.redissonClient = redissonClient;
         this.userRepository = userRepository;
+        this.orderStatusWebSocketHandler = orderStatusWebSocketHandler;
         this.kafkaTemplate = kafkaTemplate;
         this.localCouponCache = localCouponCache;
     }
@@ -237,13 +240,18 @@ public class CouponService {
         if (result == -2) return new Response<>(400, "User already purchased this coupon!", null);
         if (result == -3) return new Response<>(500, "Redis returned a non-integer for quantity!", null);
 
-        long orderId = System.currentTimeMillis();
+        // ✅ Generate UUID for orderId
+        UUID orderId = UUID.randomUUID();
         String orderMessage = orderId + "," + userId + "," + couponId;
         kafkaTemplate.send(paymentTopic, orderMessage);
-        logger.info("Order sent to Kafka: {}", orderMessage);
+        logger.info("📢 Order sent to Kafka: {}", orderMessage);
 
-        return new Response<>(200, "Order placed successfully!", "Success");
+        // ✅ Notify frontend about order placement
+        orderStatusWebSocketHandler.sendOrderUpdate(orderId.toString(), "Order placed! Waiting for payment processing...");
+
+        return new Response<>(200, "Order placed successfully!", orderId.toString());
     }
+
 
     /** Sync Coupon Data to Redis */
     private void updateCouponInCache(Coupon coupon) {

@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "user_coupons")
@@ -14,8 +15,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class UserCoupon {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id; // ✅ Change to UUID
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

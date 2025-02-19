@@ -1,6 +1,6 @@
 package Com.SimpleFlashSaleBackend.SimpleFlashSale.Service;
 
-import Com.SimpleFlashSaleBackend.SimpleFlashSale.Controller.WebSocketController;
+import Com.SimpleFlashSaleBackend.SimpleFlashSale.Config.OrderStatusWebSocketHandler;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity.Coupon;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity.User;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity.UserCoupon;
@@ -18,13 +18,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.UUID;
+
 @Service
 public class PaymentService {
     private final UserRepository userRepository;
     private final CouponRepository couponRepository;
     private final UserCouponRepository userCouponRepository;
-    private final WebSocketController webSocketController;
-
+    private final OrderStatusWebSocketHandler orderStatusWebSocketHandler;
     private final RedissonClient redissonClient;
 
     private static final String COUPON_CACHE_PREFIX = "SimpleFlashSale#coupon:";
@@ -32,12 +33,12 @@ public class PaymentService {
     private static final Logger logger = LoggerFactory.getLogger(PaymentService.class);
 
     public PaymentService(UserRepository userRepository, CouponRepository couponRepository,
-                          UserCouponRepository userCouponRepository, RedissonClient redissonClient, WebSocketController webSocketController) {
+                          UserCouponRepository userCouponRepository, RedissonClient redissonClient, OrderStatusWebSocketHandler orderStatusWebSocketHandler) {
         this.userRepository = userRepository;
         this.couponRepository = couponRepository;
         this.userCouponRepository = userCouponRepository;
         this.redissonClient = redissonClient;
-        this.webSocketController = webSocketController;
+        this.orderStatusWebSocketHandler = orderStatusWebSocketHandler;
     }
 
     @KafkaListener(topics = "${kafka.topic.payment}", groupId = "payment-group")
@@ -49,16 +50,16 @@ public class PaymentService {
     @Async
     public void processPaymentAsync(String message) {
         try {
-            // Parse Kafka message
+            // ✅ Parse Kafka message
             String[] data = message.split(",");
-            Long orderId = Long.parseLong(data[0]);
-            String userId = String.valueOf(data[1]);
+            UUID orderId = UUID.fromString(data[0]);
+            String userId = data[1];
             Long couponId = Long.parseLong(data[2]);
 
             logger.info("🛒 Processing payment for Order ID: {}", orderId);
 
             // Notify frontend: Payment processing started
-            webSocketController.sendOrderUpdate(orderId, "Payment processing started...");
+            orderStatusWebSocketHandler.sendOrderUpdate(orderId.toString(), "Payment processing started...");
 
             // Simulate a payment delay
             Thread.sleep(2000);
@@ -70,9 +71,9 @@ public class PaymentService {
 
             if (user.getCredit() < coupon.getPrice()) {
                 logger.error("❌ Payment failed for Order ID: {}, Insufficient credit", orderId);
-                webSocketController.sendOrderUpdate(orderId, "Payment failed: Insufficient credit.");
+                orderStatusWebSocketHandler.sendOrderUpdate(orderId.toString(), "Payment failed: Insufficient credit.");
 
-                // Add one back to Redis since the coupon was reserved but not paid
+                // Return stock to Redis since coupon was reserved but not paid
                 String couponQuantityKey = COUPON_CACHE_PREFIX + couponId + ":quantity";
                 RBucket<String> quantityBucket = redissonClient.getBucket(couponQuantityKey, StringCodec.INSTANCE);
                 quantityBucket.set(String.valueOf(Integer.parseInt(quantityBucket.get()) + 1));
@@ -84,25 +85,26 @@ public class PaymentService {
             user.setCredit(user.getCredit() - coupon.getPrice());
             userRepository.save(user);
 
-            // Save order
+            // ✅ Save UserCoupon with UUID as ID
             UserCoupon userCoupon = new UserCoupon();
+            userCoupon.setId(orderId.toString()); // ✅ Assign UUID
             userCoupon.setUser(user);
             userCoupon.setCoupon(coupon);
             userCoupon.setPaymentSuccess(true);
             userCouponRepository.save(userCoupon);
 
-            // Update coupon quantity in MySQL
-            synchronized (this) {  // Ensuring thread-safety for updating MySQL
+            synchronized (this) {
                 coupon.setQuantity(coupon.getQuantity() - 1);
                 couponRepository.save(coupon);
             }
 
             // Notify frontend: Payment successful
             logger.info("✅ Payment success for Order ID: {}", orderId);
-            webSocketController.sendOrderUpdate(orderId, "Payment successful!");
+            orderStatusWebSocketHandler.sendOrderUpdate(orderId.toString(), "Payment successful!");
 
         } catch (Exception e) {
             logger.error("⚠️ Error processing payment: {}", e.getMessage());
+            orderStatusWebSocketHandler.sendOrderUpdate("UNKNOWN", "Payment processing error: " + e.getMessage());
         }
     }
 }

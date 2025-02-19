@@ -1,25 +1,22 @@
 package Com.SimpleFlashSaleBackend.SimpleFlashSale.Config;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.*;
 
 @Configuration
-@EnableWebSocketMessageBroker
-public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+@EnableWebSocket
+public class WebSocketConfig implements WebSocketConfigurer {
 
-    @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // WebSocket endpoint clients will connect to
-        registry.addEndpoint("/ws-order").setAllowedOriginPatterns("*").withSockJS();
+    private final OrderStatusWebSocketHandler orderStatusWebSocketHandler;
+
+    public WebSocketConfig(OrderStatusWebSocketHandler orderStatusWebSocketHandler) {
+        this.orderStatusWebSocketHandler = orderStatusWebSocketHandler;
     }
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Enable simple message broker for real-time updates
-        registry.enableSimpleBroker("/topic");
-        registry.setApplicationDestinationPrefixes("/app");
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(orderStatusWebSocketHandler, "/ws/orders")
+                .setAllowedOrigins("http://localhost:3000")
+                .withSockJS();
     }
 }

@@ -97,46 +97,59 @@ export default {
       }
 
       try {
-        const token = loginResponse.data;
-        localStorage.setItem("token", token);
-        this.token = token;
+        this.token = loginResponse.data;
+        localStorage.setItem("token", this.token);
 
         // Decode JWT to get userId
-        const tokenParts = token.split(".");
+        const tokenParts = this.token.split(".");
         const decodedPayload = JSON.parse(atob(tokenParts[1]));
         const userId = decodedPayload.sub;
+        localStorage.setItem("userId", userId); // ✅ Store userId in localStorage
 
-        // ✅ Fetch user profile
-        const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
-          headers: { Authorization: token },
-        });
+        console.log("🔑 Token & userId stored in localStorage:", userId);
 
-        const userData = await response.json();
-        if (response.ok && userData.data) {
-          this.user = userData.data;
-          localStorage.setItem("user", JSON.stringify(userData.data)); // ✅ Store user details
-        } else {
-          console.error("Failed to fetch user profile:", userData);
-        }
+        // ✅ Fetch user profile dynamically
+        await this.verifySession(userId);
       } catch (error) {
         console.error("Error fetching user profile:", error);
       }
     },
 
     // ✅ Restore session on refresh
-    restoreSession() {
+    async restoreSession() {
       const storedToken = localStorage.getItem("token");
-      const storedUser = localStorage.getItem("user");
+      const storedUserId = localStorage.getItem("userId");
 
-      if (storedToken && storedUser) {
+      if (storedToken && storedUserId) {
         try {
           this.token = storedToken;
-          this.user = JSON.parse(storedUser);
-          console.log("Session restored:", this.user);
+          console.log("🔄 Session restored. Verifying token...");
+
+          // ✅ Verify token validity
+          await this.verifySession(storedUserId);
         } catch (error) {
-          console.error("Error restoring session:", error);
-          this.logout(); // Clear invalid session
+          console.error("❌ Error restoring session:", error);
+          this.logout(); // ✅ Clear invalid session
         }
+      }
+    },
+
+    async verifySession(userId) {
+      try {
+        const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
+          headers: { Authorization: this.token },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Session verification failed: ${response.status}`);
+        }
+
+        const userData = await response.json();
+        this.user = userData.data;
+        console.log("✅ Session verified successfully! User:", this.user);
+      } catch (error) {
+        console.error("❌ Session invalid, logging out:", error);
+        this.logout(); // ✅ Clear invalid session if request fails
       }
     },
 
@@ -146,26 +159,28 @@ export default {
 
     async logout() {
       const token = localStorage.getItem("token");
-      if (!token) return;
 
-      try {
-        const response = await fetch(`http://localhost:8080/api/users/logout`, {
-          method: "POST",
-          headers: { Authorization: token },
-        });
+      if (token) {
+        try {
+          const response = await fetch(`http://localhost:8080/api/users/logout`, {
+            method: "POST",
+            headers: { Authorization: token },
+          });
 
-        if (response.ok) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          this.user = null;
-          this.token = null;
-          alert("Logout successful!");
-        } else {
-          alert("Logout failed!");
+          if (!response.ok) {
+            console.warn("⚠️ Logout request failed. Clearing session anyway.");
+          }
+        } catch (error) {
+          console.error("❌ Error logging out:", error);
         }
-      } catch (error) {
-        console.error("Error logging out:", error);
       }
+
+      // ✅ Always clear session data
+      localStorage.removeItem("token");
+      this.user = null;
+      this.token = null;
+
+      console.log("🚪 User logged out!");
     },
   },
 };

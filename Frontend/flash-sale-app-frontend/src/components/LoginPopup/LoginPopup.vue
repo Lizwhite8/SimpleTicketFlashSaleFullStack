@@ -77,7 +77,7 @@ export default {
 
                 if (data && data.data) {
                     this.$emit('login-success', data);
-                    this.$refs.snackbar.showMessage("Login successful!", "green", 3000);
+                    this.$refs.snackbar.showMessage(this.isLogin ? "Login successful!" : "Successfully signed up!", "green", 3000);
 
                     // ✅ Hide login modal correctly
                     const loginModalElement = document.getElementById('loginModal');
