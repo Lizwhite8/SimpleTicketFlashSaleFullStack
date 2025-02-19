@@ -1,6 +1,6 @@
 package Com.SimpleFlashSaleBackend.SimpleFlashSale.Service;
 
-import Com.SimpleFlashSaleBackend.SimpleFlashSale.Config.OrderStatusWebSocketHandler;
+import Com.SimpleFlashSaleBackend.SimpleFlashSale.Websocket.OrderStatusWebSocketHandler;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Dto.CouponDTO;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity.Coupon;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Entity.User;
@@ -10,6 +10,7 @@ import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.CouponRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Repository.UserRepository;
 import Com.SimpleFlashSaleBackend.SimpleFlashSale.Response.Response;
 
+import Com.SimpleFlashSaleBackend.SimpleFlashSale.Websocket.ServerIdGenerator;
 import com.github.benmanes.caffeine.cache.Cache;
 import org.redisson.api.RBucket;
 import org.redisson.api.RLock;
@@ -242,7 +243,9 @@ public class CouponService {
 
         // ✅ Generate UUID for orderId
         UUID orderId = UUID.randomUUID();
-        String orderMessage = orderId + "," + userId + "," + couponId;
+        String serverId = ServerIdGenerator.getServerId(); // ✅ Get the server ID
+        String orderMessage = String.format("%s,%s,%s,%s", orderId, userId, couponId, serverId);
+
         kafkaTemplate.send(paymentTopic, orderMessage);
         logger.info("📢 Order sent to Kafka: {}", orderMessage);
 

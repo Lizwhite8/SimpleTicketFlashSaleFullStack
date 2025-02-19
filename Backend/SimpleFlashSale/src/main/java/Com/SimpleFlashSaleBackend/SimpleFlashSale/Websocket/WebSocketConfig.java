@@ -1,4 +1,4 @@
-package Com.SimpleFlashSaleBackend.SimpleFlashSale.Config;
+package Com.SimpleFlashSaleBackend.SimpleFlashSale.Websocket;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.*;

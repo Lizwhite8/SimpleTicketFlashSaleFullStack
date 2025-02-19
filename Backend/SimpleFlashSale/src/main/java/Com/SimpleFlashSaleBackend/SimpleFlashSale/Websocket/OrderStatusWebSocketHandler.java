@@ -1,8 +1,7 @@
-package Com.SimpleFlashSaleBackend.SimpleFlashSale.Config;
+package Com.SimpleFlashSaleBackend.SimpleFlashSale.Websocket;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
