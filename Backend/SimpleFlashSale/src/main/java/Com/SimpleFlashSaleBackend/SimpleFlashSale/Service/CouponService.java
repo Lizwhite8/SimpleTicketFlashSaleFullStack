@@ -278,4 +278,10 @@ public class CouponService {
             throw new RuntimeException("Failed to load Lua script: " + scriptPath, e);
         }
     }
+
+    public int getTotalPages(int size) {
+        long totalCoupons = couponRepository.countByIsDeletedFalse();
+        return (int) Math.ceil((double) totalCoupons / size);
+    }
+
 }

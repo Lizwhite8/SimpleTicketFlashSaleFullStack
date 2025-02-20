@@ -9,12 +9,8 @@
           <strong>Price:</strong> 💰{{ coupon.price }} | <strong>Qty:</strong>
           {{ coupon.quantity }}
         </p>
-        <button 
-          class="btn btn-primary" 
-          style="min-width: 100px" 
-          @click="buyCoupon" 
-          :disabled="!user || isProcessing || purchasedCoupons.includes(coupon.id)"
-        >
+        <button class="btn btn-primary" style="min-width: 100px" @click="buyCoupon"
+          :disabled="!user || isProcessing || purchasedCoupons.includes(coupon.id)">
           Buy
         </button>
       </div>
@@ -35,7 +31,7 @@ export default {
       reconnectAttempts: 0,
       snackbarQueue: [],
       snackbarTimeout: null,
-      isProcessing: false, // ✅ Tracks if a purchase is being processed
+      isProcessing: false, // ✅ Prevents multiple purchases at once
     };
   },
   methods: {
@@ -45,7 +41,7 @@ export default {
         return;
       }
 
-      this.isProcessing = true; // ✅ Disable all Buy buttons while processing
+      this.isProcessing = true;
 
       try {
         const formData = new URLSearchParams();
@@ -77,7 +73,7 @@ export default {
       } catch (error) {
         console.error("Error purchasing coupon:", error);
         this.queueSnackbar(`Error: ${error.message}`, "red", 3000);
-        this.isProcessing = false; // ✅ Re-enable buttons if the purchase fails
+        this.isProcessing = false;
       }
     },
 
@@ -92,29 +88,35 @@ export default {
       };
 
       socket.onmessage = async (event) => {
-        setTimeout(() => {
-          console.log("🔥 Message Received from WebSocket:", event.data);
-          try {
-            const orderStatus = JSON.parse(event.data);
-            this.queueSnackbar(orderStatus.message, "blue", 2000);
+        console.log("🔥 Message Received from WebSocket:", event.data);
+        try {
+          const orderStatus = JSON.parse(event.data);
+          this.queueSnackbar(orderStatus.message, "blue", 2000);
 
-            if (orderStatus.message === "Payment successful!") {
-              this.$emit("update-purchased-coupons"); // ✅ Refresh purchased coupons
-              this.$emit("update-user-credit"); // ✅ Update user credit balance
-            }
-          } catch (error) {
-            console.warn("⚠️ Received non-JSON message, extracting status only.");
-            const statusMatch = event.data.match(/update: (.*)$/);
-            const statusMessage = statusMatch ? statusMatch[1] : event.data;
-            console.log("✅ Extracted Status Message:", statusMessage);
-            this.queueSnackbar(statusMessage, "blue", 2000);
-
-            if (statusMessage === "Payment successful!") {
-              this.$emit("update-purchased-coupons");
-              this.$emit("update-user-credit");
-            }
+          if (orderStatus.message === "Payment successful!") {
+            this.$emit("update-purchased-coupons"); // ✅ Refresh purchased coupons
+            this.$emit("update-user-credit"); // ✅ Refresh user balance
+          } else {
+            console.warn("⚠️ Payment failed for coupon:", this.coupon.id);
+            this.$emit("remove-from-purchased", this.coupon.id); // ✅ Remove from purchased list
+            this.isProcessing = false;
           }
-        }, 500);
+        } catch (error) {
+          console.warn("⚠️ Received non-JSON message, extracting status only.");
+          const statusMatch = event.data.match(/update: (.*)$/);
+          const statusMessage = statusMatch ? statusMatch[1] : event.data;
+          console.log("✅ Extracted Status Message:", statusMessage);
+          this.queueSnackbar(statusMessage, "blue", 2000);
+
+          if (statusMessage === "Payment successful!") {
+            this.$emit("update-purchased-coupons");
+            this.$emit("update-user-credit");
+          } else if (statusMessage.startsWith("Payment failed")) {
+            console.warn("⚠️ Payment failed for coupon:", this.coupon.id);
+            this.$emit("remove-from-purchased", this.coupon.id); // ✅ Remove from purchased list
+            this.isProcessing = false;
+          }
+        }
       };
 
       socket.onerror = (error) => {

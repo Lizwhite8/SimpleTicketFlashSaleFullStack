@@ -1,39 +1,49 @@
 <template>
-  <div class="container">
-    <header class="d-flex justify-content-between align-items-center p-3 bg-light">
-      <h3>Flash Sale</h3>
+  <div style="display: flex; flex-direction: column; min-height: 100vh; background-color: #f2f2f2;">
+    <header class="d-flex justify-content-between align-items-center p-3" style="height: 100px; background-color: #dbdbf0 !important">
+      <h3>Coupon Flash Sale System</h3>
 
       <div>
-        <!-- Login Button -->
         <button v-if="!user" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#loginModal">
           Login
         </button>
 
-        <!-- Username Button & Logout -->
         <div v-else class="d-flex align-items-center gap-3">
-          <!-- User Credit Display -->
           <p class="mb-0 fw-bold text-success">💰 {{ user.credit }}</p>
 
-          <!-- User Profile Button -->
           <button class="btn btn-outline-primary" @click="showUserCoupons">
             👤 {{ user.username }}
           </button>
 
-          <!-- Logout Button -->
           <button class="btn btn-danger" @click="logout">🚪 Logout</button>
         </div>
       </div>
     </header>
 
     <!-- Coupons List -->
-    <div>
+    <div style="margin: 0px 50px;">
       <CouponCard v-for="coupon in coupons" :key="coupon.id" :coupon="coupon" :user="user"
         :purchasedCoupons="purchasedCoupons" @update-purchased-coupons="fetchPurchasedCoupons"
         @update-user-credit="fetchUserCredit" />
     </div>
 
+    <!-- Pagination Controls -->
+    <div class="d-flex justify-content-center align-items-center my-3 gap-2" style="margin-top: auto; margin-bottom: 30px !important; padding-top: 20px;">
+      <button class="btn btn-outline-primary btn-sm d-flex align-items-center" @click="prevPage"
+        :disabled="currentPage === 0">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+
+      <p class="mb-0">Page {{ currentPage + 1 }} of {{ totalPages }}</p>
+
+      <button class="btn btn-outline-primary btn-sm d-flex align-items-center" @click="nextPage"
+        :disabled="currentPage >= totalPages - 1">
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+
     <!-- Footer -->
-    <footer class="text-center p-3 bg-light">2025 @Lisa White</footer>
+    <footer class="text-center p-3" style="margin-top: 0; height: 100px; display: flex; align-items: center; justify-content: center; background-color: #dbdbf0 !important">2025 @Lisa White<a href="https://github.com/Lizwhite8/SimpleTicketFlashSaleFullStack" style="margin-left: 20px;">Project Github</a></footer>
 
     <!-- Components -->
     <LoginPopup @login-success="setUser" />
@@ -55,6 +65,9 @@ export default {
       purchasedCoupons: [],
       showCouponsPopup: false,
       token: null,
+      currentPage: 0,
+      totalPages: 1, // Default value to prevent issues
+      pageSize: 8, // Default number of coupons per page
     };
   },
 
@@ -65,28 +78,23 @@ export default {
 
   methods: {
     async setUser(loginResponse) {
-      // console.log(loginResponse);
       if (!loginResponse || !loginResponse.data || typeof loginResponse.data !== "string") {
         return;
       }
 
-      this.token = loginResponse.data.trim(); // ✅ Ensure token is a string
+      this.token = loginResponse.data.trim();
       localStorage.setItem("token", this.token);
 
       try {
-        // ✅ Decode JWT Safely
-        console.log(this.token);
         const tokenParts = this.token.split(".");
         if (tokenParts.length !== 3) throw new Error("Invalid token format");
 
-        const decodedPayload = JSON.parse(atob(tokenParts[1])); // Decode JWT payload
+        const decodedPayload = JSON.parse(atob(tokenParts[1]));
         const userId = decodedPayload.sub;
 
         if (!userId) throw new Error("User ID missing in token");
 
         localStorage.setItem("userId", userId);
-        console.log("🔑 Token & userId stored in localStorage:", userId);
-
         await this.verifySession(userId);
       } catch (error) {
         console.error("Error decoding JWT:", error);
@@ -100,7 +108,6 @@ export default {
 
       if (storedToken && storedUserId) {
         this.token = storedToken;
-        console.log("🔄 Restoring session...");
         await this.verifySession(storedUserId);
       }
     },
@@ -111,13 +118,10 @@ export default {
           headers: { Authorization: this.token },
         });
 
-        if (!response.ok) {
-          throw new Error(`Session verification failed: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Session verification failed: ${response.status}`);
 
         const userData = await response.json();
         this.user = userData.data;
-        console.log("✅ Session verified:", this.user);
 
         await this.fetchPurchasedCoupons();
       } catch (error) {
@@ -128,11 +132,13 @@ export default {
 
     async fetchCoupons() {
       try {
-        const response = await fetch("http://localhost:8080/api/coupons?page=0&size=8");
+        const response = await fetch(`http://localhost:8080/api/coupons?page=${this.currentPage}&size=${this.pageSize}`);
         if (!response.ok) throw new Error(`Failed to fetch coupons: ${response.status}`);
 
         const jsonData = await response.json();
-        this.coupons = jsonData.data || [];
+        // console.log(json);
+        this.coupons = jsonData.data.coupons || [];
+        this.totalPages = jsonData.data.totalPages || 1; // ✅ Update total pages
       } catch (error) {
         console.error("Error fetching coupons:", error);
       }
@@ -142,10 +148,9 @@ export default {
       if (!this.user) return;
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(
-          `http://localhost:8080/api/users/${this.user.id}/coupons`,
-          { method: "GET", headers: { Authorization: token } }
-        );
+        const response = await fetch(`http://localhost:8080/api/users/${this.user.id}/coupons`, {
+          headers: { Authorization: token },
+        });
 
         if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
 
@@ -153,8 +158,6 @@ export default {
         this.purchasedCoupons = data.data
           .filter(coupon => coupon.paymentSuccessful)
           .map(coupon => coupon.id);
-
-        console.log("✅ Purchased Coupons Updated:", this.purchasedCoupons);
       } catch (error) {
         console.error("❌ Error fetching purchased coupons:", error);
       }
@@ -163,15 +166,20 @@ export default {
     async fetchUserCredit() {
       if (!this.user) return;
       try {
-        const response = await fetch(`http://localhost:8080/api/users/${this.user.id}`, {
-          headers: { Authorization: this.token },
-        });
+        setTimeout(async () => {
+          console.log('fetching user credit');
+          const response = await fetch(`http://localhost:8080/api/users/${this.user.id}`, {
+            headers: { Authorization: this.token },
+          });
 
-        if (!response.ok) throw new Error(`Failed to fetch user: ${response.status}`);
+          if (!response.ok) throw new Error(`Failed to fetch user: ${response.status}`);
 
-        const userData = await response.json();
-        this.user.credit = userData.data.credit; // ✅ Update the displayed credit
-        console.log("✅ User credit updated:", this.user.credit);
+          const userData = await response.json();
+          // ✅ Ensures Vue detects the change
+          this.user = Object.assign({}, this.user, { credit: userData.data.credit });
+
+          console.log("✅ User credit updated:", this.user.credit);
+        }, 200);
       } catch (error) {
         console.error("❌ Error fetching user credit:", error);
       }
@@ -183,11 +191,24 @@ export default {
       this.user = null;
       this.token = null;
       this.purchasedCoupons = [];
-      console.log("🚪 User logged out!");
     },
 
     showUserCoupons() {
       this.showCouponsPopup = true;
+    },
+
+    async prevPage() {
+      if (this.currentPage > 0) {
+        this.currentPage--;
+        await this.fetchCoupons();
+      }
+    },
+
+    async nextPage() {
+      if (this.currentPage < this.totalPages - 1) {
+        this.currentPage++;
+        await this.fetchCoupons();
+      }
     },
   },
 };

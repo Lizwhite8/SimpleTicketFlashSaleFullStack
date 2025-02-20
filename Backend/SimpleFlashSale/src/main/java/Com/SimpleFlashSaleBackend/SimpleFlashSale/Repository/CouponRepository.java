@@ -21,5 +21,7 @@ public interface CouponRepository extends JpaRepository<Coupon, Long> {
 
     // Optional: Fetch paginated coupons that are not deleted
     Page<Coupon> findByIsDeletedFalse(Pageable pageable);
+
+    long countByIsDeletedFalse();
 }
 

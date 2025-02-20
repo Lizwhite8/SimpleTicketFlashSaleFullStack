@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/coupons")
@@ -31,13 +33,22 @@ public class CouponController {
     }
 
     @GetMapping
-    public ResponseEntity<Response<List<CouponDTO>>> getCouponsPaginated(
+    public ResponseEntity<Response<Map<String, Object>>> getCouponsPaginated(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int size) {
 
         Response<List<CouponDTO>> response = couponService.getCouponsPaginated(page, size);
-        return ResponseEntity.status(response.getStatusCode()).body(response);
+
+        // Get the total pages from the service
+        int totalPages = couponService.getTotalPages(size);
+
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("coupons", response.getData());
+        responseData.put("totalPages", totalPages);
+
+        return ResponseEntity.status(response.getStatusCode()).body(new Response<>(response.getStatusCode(), response.getMessage(), responseData));
     }
+
 
 
     // ✅ Search coupons by name
