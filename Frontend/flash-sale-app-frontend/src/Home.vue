@@ -28,7 +28,7 @@
     </div>
 
     <!-- Pagination Controls -->
-    <div class="d-flex justify-content-center align-items-center my-3 gap-2" style="margin-top: auto; margin-bottom: 30px !important; padding-top: 20px;">
+    <div class="d-flex justify-content-center align-items-center my-3 gap-2" style="margin-top: auto !important; margin-bottom: 30px !important; padding-top: 20px;">
       <button class="btn btn-outline-primary btn-sm d-flex align-items-center" @click="prevPage"
         :disabled="currentPage === 0">
         <i class="fa-solid fa-arrow-left"></i>

@@ -20,6 +20,11 @@ spring:
         jwt:
           issuer-uri: http://localhost:7080/realms/SimpleFlashSale
 
+server:
+  port: 8080
+  http2:
+    enabled: true
+
 keycloak:
   auth-server-url: http://localhost:7080
   realm: SimpleFlashSale
@@ -33,5 +38,7 @@ redis:
 
 kafka:
   bootstrap-servers: localhost:9092
+  producer:
+    retries: 3
   topic:
     payment: "payment_orders"
