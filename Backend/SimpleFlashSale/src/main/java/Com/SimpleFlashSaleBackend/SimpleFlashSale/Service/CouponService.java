@@ -93,10 +93,6 @@ public class CouponService {
                 .map(CouponMapper::toDTO)
                 .collect(Collectors.toList());
 
-        if (coupons.isEmpty()) {
-            return new Response<>(404, "No coupons found for the given name.", Collections.emptyList());
-        }
-
         return new Response<>(200, "Coupons retrieved successfully!", coupons);
     }
 
@@ -137,7 +133,7 @@ public class CouponService {
                     .collect(Collectors.toList());
 
             if (coupons.isEmpty()) {
-                return new Response<>(404, "No coupons available.", Collections.emptyList());
+                return new Response<>(200, "Coupons retrieved successfully!", Collections.emptyList());
             }
 
             // **4️⃣ Replace quantity with Redis value if available**

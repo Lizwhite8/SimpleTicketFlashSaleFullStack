@@ -133,6 +133,7 @@ services:
       REDIS_URL: redis://redis:6379
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       KAFKA_TOPIC_PAYMENT: payment_orders
+      SERVER_PORT: 8081
     networks:
       - flashsale_network
 
