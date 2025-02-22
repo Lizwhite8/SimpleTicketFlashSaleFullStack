@@ -162,7 +162,7 @@ Given the system’s need for **strict transactional control**, **accurate inven
 
 ### **Deployment Strategy and Challenges**
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXccwb5iex1c-VfRQS2J_9bAnyfvgrar3n2-0fAlPg99h3sXr8eVvC5FkGFCeEn6LVOvRu-itEMfmhZdLKFSrM2grOPAazWxVS4Uqw6wl2jYSOnTVnf-vxepVI-6IaUQ5K_tcLJrfA?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcBvyc82V698aFD1dPPDY0fzNKjTy_8kfA0z4dEQRMzh23_Y2n-Xnrc5h9Jq1E_O-JoEehHx9E-ENAFg3Hkg-RF3a-1dCeBJO0301xJrvYYkdDcjVMCl6d0fhPYdHZJ02m4SsURKA?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 The current development environment hosts all middleware and backend services using **Docker containers** on **AWS EC2** instances, deployed within a **public subnet**. This setup facilitates a streamlined development process by enabling direct external access without the need for additional networking configurations like a NAT gateway. It offers a **cost-effective** solution for development purposes while providing hands-on experience in managing containerized applications manually. Additionally, **AWS S3** is utilized for storing **coupon images**, eliminating the need for local storage and allowing seamless media asset access across different services.
 
