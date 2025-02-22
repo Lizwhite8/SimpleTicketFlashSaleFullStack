@@ -1,5 +1,5 @@
 <template>
-  <div class="card d-flex flex-column flex-md-row p-3 m-2">
+  <div class="card d-flex flex-column flex-md-row p-3 m-2 position-relative">
     <img
       :src="coupon.imageURL"
       class="img-fluid responsive-image"
@@ -57,6 +57,16 @@
     display: block;
     width: 100%;
     margin-top: 10px;
+  }
+}
+
+/* Style for larger screens */
+@media (min-width: 768px) {
+  .buy-button {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 150px;
   }
 }
 </style>
