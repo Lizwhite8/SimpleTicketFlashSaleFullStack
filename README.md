@@ -119,7 +119,7 @@ This is where **Redisson** proves invaluable. It offers an auto-expiring distrib
 The choice of **Redisson** is driven by its ability to provide both **distributed mutual exclusion** and a **fail-safe Watchdog mechanism**. This combination ensures that only one process can repopulate the cache at a time, effectively preventing cache breakdown. At the same time, it safeguards against potential deadlocks caused by unexpected process failures. By integrating Redisson’s distributed locking and Watchdog features, the system protects **MySQL** from sudden load spikes, maintains consistent cache integrity, and ensures stable performance under heavy traffic—allowing the platform to handle high-concurrency scenarios reliably without compromising database stability.
 
 
-### **Authentication with Keycloak and Spring Security **
+### **Authentication with Keycloak and Spring Security
 
 ******![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcMFvNQ_5AaeSQ9UTLTgY58_2mD9LfyEkwGnUz_8HMSrDFYjhJuaBD_fXPduSO_STWTHTU1DaO6FDcGSogs9W_KFoYG0ltruXhnj0S3LmRlaZhuDoO6HzBeeTVslKck0aKAGVJjIg?key=gh4idSIF-ZqgJoW6XwLW-efd)******
 
