@@ -49,7 +49,7 @@ export default {
         formData.append("couponId", this.coupon.id);
 
         const token = localStorage.getItem("token");
-        const response = await fetch("http://localhost:8080/api/coupons/buy", {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/coupons/buy`, {
           method: "POST",
           headers: {
             Authorization: token,
@@ -80,7 +80,7 @@ export default {
     initializeWebSocket(orderId) {
       console.log("🔄 Initializing WebSocket...");
 
-      const socket = new WebSocket(`ws://localhost:8080/ws/orders/${orderId}`);
+      const socket = new WebSocket(`${import.meta.env.VITE_API_BASE_WS_URL}/ws/orders/${orderId}`);
 
       socket.onopen = () => {
         console.log("✅ WebSocket connected!");

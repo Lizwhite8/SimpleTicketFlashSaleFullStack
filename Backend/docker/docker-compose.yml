@@ -102,8 +102,8 @@ services:
     networks:
       - flashsale_network
 
-  flashsale:
-    image: flashsale:v1
+  flashsale_backend:
+    image: flashsale_backend:v1
     container_name: flashsale_backend
     restart: always
     ports:
@@ -137,6 +137,17 @@ services:
     networks:
       - flashsale_network
 
+  flashsale_frontend:
+    image: flashsale_frontend:v1  
+    container_name: flashsale_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - flashsale_backend
+    networks:
+      - flashsale_network
+    
 volumes:
   mysql_data:
   redis_data:

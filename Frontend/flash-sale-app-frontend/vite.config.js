@@ -8,7 +8,6 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
-    // vueDevTools(),
   ],
   resolve: {
     alias: {
@@ -18,12 +17,12 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      "/ws": {
-          target: "http://localhost:8080",
-          ws: true,
-          changeOrigin: true,
+      '/ws': {
+        target: process.env.VITE_API_BASE_WS_URL || 'ws://localhost:8080',
+        ws: true,
+        changeOrigin: true,
       }
-  }
+    }
   },
   define: {
     global: {}, // Ensures global is defined

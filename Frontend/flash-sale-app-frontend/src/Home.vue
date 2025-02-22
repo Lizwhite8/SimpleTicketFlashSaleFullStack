@@ -114,7 +114,7 @@ export default {
 
     async verifySession(userId) {
       try {
-        const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/${userId}`, {
           headers: { Authorization: this.token },
         });
 
@@ -132,7 +132,8 @@ export default {
 
     async fetchCoupons() {
       try {
-        const response = await fetch(`http://localhost:8080/api/coupons?page=${this.currentPage}&size=${this.pageSize}`);
+        console.log(import.meta.env.VITE_API_BASE_URL);
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/coupons?page=${this.currentPage}&size=${this.pageSize}`);
         if (!response.ok) throw new Error(`Failed to fetch coupons: ${response.status}`);
 
         const jsonData = await response.json();
@@ -148,7 +149,7 @@ export default {
       if (!this.user) return;
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch(`http://localhost:8080/api/users/${this.user.id}/coupons`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/${this.user.id}/coupons`, {
           headers: { Authorization: token },
         });
 
@@ -168,7 +169,7 @@ export default {
       try {
         setTimeout(async () => {
           console.log('fetching user credit');
-          const response = await fetch(`http://localhost:8080/api/users/${this.user.id}`, {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/${this.user.id}`, {
             headers: { Authorization: this.token },
           });
 

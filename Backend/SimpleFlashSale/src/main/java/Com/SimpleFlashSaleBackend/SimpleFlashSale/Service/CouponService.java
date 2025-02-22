@@ -177,6 +177,8 @@ public class CouponService {
             coupon.setName(dto.getName());
             coupon.setDescription(dto.getDescription());
             coupon.setQuantity(dto.getQuantity());
+            coupon.setImageURL(dto.getImageURL());
+            coupon.setPrice(dto.getPrice());
 
             Coupon updatedCoupon = couponRepository.save(coupon);
             updateCouponInCache(updatedCoupon);

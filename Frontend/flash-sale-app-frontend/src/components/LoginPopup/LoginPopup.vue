@@ -61,7 +61,7 @@ export default {
                 : { username: this.username, email: this.email, password: this.password };
 
             try {
-                const response = await fetch(`http://localhost:8080/api/users/${endpoint}`, {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/users/${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)

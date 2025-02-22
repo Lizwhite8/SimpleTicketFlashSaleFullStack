@@ -38,7 +38,7 @@ export default {
         }
 
         const response = await fetch(
-          `http://localhost:8080/api/users/${this.user.id}/coupons`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/users/${this.user.id}/coupons`,
           {
             method: "GET",
             headers: {
