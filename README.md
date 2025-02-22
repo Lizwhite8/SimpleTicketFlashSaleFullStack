@@ -1,5 +1,7 @@
 # **Flash Sale System Requirements Document**
 
+[Flash Sale System Requirements Document](#flash-sale-system-requirements-document)
+
 [1. Project Overview](#1-project-overview)
 
 [2. Tech Stack](#2-tech-stack)
@@ -20,18 +22,20 @@
 
 [Database Choice (MySQL)](#database-choice-mysql)
 
+[Backend Scalability](#backend-scalability)
+
 [Deployment Strategy and Challenges](#deployment-strategy-and-challenges)
 
 
 ## **1. Project Overview**
 
-****Project URL:** [**Vite App**](http://3.145.159.42/)**
+**Project URL:** [**Vite App**](http://3.145.159.42/)
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXfxTMzgHCrGQjYyzm7t-NLz1TsevTYgNTlG4CYfE82WELZOs--Hv-aIYH7TbBSrlldaYkLESZHuJYxOik4IN_cv2AmYkPN-dCwogrtP_vBGCBucmEbrh4hmMUi7iUPGj4ryoCq_?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXeUqBfoBKYDMMqcay70AHxikZeOA1UXW_PnaLYX-_Ac2mxDij70OnchK0o1_t-w-sB9I4x4UVODn-3hyHApkGP4cy1Q2C7xYno9gkh3ng8bUUlaqqKVW0_j6e9eFrSyz-_C4XSg?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
-The Flash Sale System is designed to facilitate high-speed coupon purchases during flash sales while ensuring performance, security, and data consistency. Users can register and log in using their email without verification, browse available coupons, and attempt to purchase them in real time. The system does not support password modification or real payment, as the primary focus is on managing high-demand, time-sensitive coupon sales efficiently.
+The Flash Sale System is designed to facilitate high-speed coupon purchases during flash sales while ensuring performance, security, and data consistency. Users can register and log in using their email without verification, browse available coupons, and attempt to purchase them in real time. The system does not support password modification or payment processing, as the primary focus is on managing high-demand, time-sensitive coupon sales efficiently.
 
-A major challenge in building this system is handling high concurrency while maintaining strong consistency. Flash sales generate massive user requests within a short period, leading to risks such as database overload, overselling of coupons, and race conditions in order processing. To mitigate these challenges, the system relies on a combination of **Redis and Lua scripting** for atomic operations, **Kafka, Redis Pub/Sub, and WebSocket** for asynchronous processing, and **multi-level caching mechanisms** to reduce database queries. The deployment is currently on **AWS EC2**, running in **Docker Containers within a public subnet**, but future plans include migrating to **EKS deployed in a private subnet for improved scalability, security, and high availability**.
+A major challenge in building this system is handling high concurrency while maintaining strong consistency. Flash sales generate massive user requests within a short period, leading to risks such as database overload, overselling of coupons, and race conditions in order processing. To mitigate these challenges, the system relies on a combination of **Redis and Lua scripting** for atomic operations, **Kafka, Redis Pub/Sub, and WebSocket** for asynchronous processing, and **multi-level caching mechanisms** to reduce database queries. Currently, the deployment runs on **AWS EC2**, with three backend servers deployed on a single EC2 instance within a public subnet, running in **Docker containers**. This setup enables **parallel processing and load distribution**. However, future plans include migrating the system to **Amazon EKS** within a **private subnet** to enhance scalability, security, and high availability.
 
 
 ## **2. Tech Stack**
@@ -40,14 +44,14 @@ The frontend is built using **Vue.js and Bootstrap**, providing a user-friendly 
 
 For caching and high-speed inventory management, the system integrates **Redis** with **Lua scripting** to ensure atomic stock deductions and prevent overselling. A **multi-layer caching strategy** combining **Caffeine for local memory caching and Redis for distributed caching** reduces query load on MySQL. **Kafka, WebSocket, and Redis Pub/Sub** work together to manage asynchronous order processing and updates, ensuring a seamless payment experience.
 
-Deployment is currently on **AWS**, with **S3 for image storage** and **docker containers running inside an EC2 instance** within a public subnet. While **EKS was not chosen** due to cost considerations and the project's personal training purpose, a migration is planned to ensure proper **horizontal scaling, high availability, and security**. **NGINX serves as a reverse proxy** to handle frontend hosting and distribute backend requests efficiently.
+Deployment is currently on **AWS**, with **S3 for image storage** and **Kubernetes running inside an EC2 instance** within a public subnet. While **EKS was not chosen** due to cost considerations and the project's personal training purpose, a migration is planned to ensure proper **horizontal scaling, high availability, and security**. **NGINX serves as a reverse proxy** to handle frontend hosting and distribute backend requests efficiently.
 
 
 ## **3. Design Overview**
 
 ### **Flash Sale User Qualification Check with Redis and Lua for High-Concurrency Management**
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXc756vXqeV4yBgM35dNmGCFf0mhosGDw7AsN6LKPibMWZfPsngZ3e9YGxjB2VwUWG8Yiyd6pA-B0rwEqe1TrUwMpP6vFf-Oel957zCZSK6uiejsJ8Dn_r9GPnhfayxAvs_fgkuDTg?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXdsd0mmNA-EC9Ie_lzeSgtVFqUv2qLvOwJG9LunEmbHNBfNQLm3rcIOV__e0eFTdX6oTWvRGuGUB1t2ha3fxh6hE-Z7-p-CpcD0kmcelNOVYrmolAJyrGevYswEwr3EKKnp614Q2A?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 Managing **high concurrency** while preventing **overselling** presents one of the most significant technical challenges in flash sale systems. To optimize coupon stock management, the system leverages **Redis** to handle inventory counts, eliminating the need for constant database queries and ensuring faster performance. However, since Redis operations are not inherently transactional, **Lua scripting** is introduced to enforce **atomicity**, allowing stock verification and deduction to occur in a single, indivisible step. This strategy effectively prevents **race conditions** without requiring explicit locks, making it ideal for handling high-speed transactions during peak sale events.
 
@@ -62,7 +66,7 @@ The final solution—combining **Redis** and **Lua scripting**—proves to be th
 
 ### **Asynchronous Order Processing with Kafka, WebSocket, and Redis Pub/Sub**
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXdbp7hnVpMnGHVQ9lKJwjBBbEAlbhytCOhgVMeJFKfy7XMa5XNfIpEpntDV-_Dm2bMf4OcVvcUbkpPY-CzBOyTv8bKGJt7LB-5l8nMxk83kfPk0ORaMlEkSVnqOvGL2oFZ-cT8h?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXf8pgVOsYRTPJT9e8VxJofL98Cgyxm9QNfEyG8QGF74gLFe7FSWbEj805DQddI8skpo56lmQwXndOofQdbWQ54wTPFhIP1V0GYAR6cDmuUOj6cIP6vKdUwNzCDIyj1cmdnntwk2?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 In handling thousands of concurrent payment requests while ensuring real-time user feedback, the system follows a robust process that combines **Kafka** for event-driven communication, **Redis Pub/Sub** for distributed message delivery, and **WebSocket** for real-time client interaction. This architecture effectively decouples **order placement** from **payment processing**, preventing frontend blocking and ensuring that payment results are delivered to the correct WebSocket connection on the appropriate server instance.
 
@@ -83,7 +87,7 @@ In summary, the system effectively integrates Kafka, Redis Pub/Sub, and WebSocke
 
 ### **Multi-Level Caching Strategy (Caffeine + Redis)**
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXeRcuALagotk1O_gNU4Os_ZgZRyZsYzOKUUYL6L43-sIQq7liLww0vnzxmjga83Jx24ZmEt23ErT3LJKsHgOrnhfWpIySWf4tSlpGkNjTuftXbOygmbIXE7138gxwg9Tb2eY5F2fw?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXfwWIXsOEMuh--Wmj7GC5gWc4Bi2Hvi6dwHLxydMQE9jJniGRbP-y7xuWuXfDZX7GWoliHV3xfkagGNzH3ig5fKGr3ig5QsOAusazNs31p054YA7weg8xGWrp_c904YSbQFeh7Ltg?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 Frequent access to coupon descriptions creates significant database load, especially during peak times when thousands of users browse available coupons simultaneously. To optimize performance and reduce unnecessary database queries, the system employs a **multi-level caching strategy** that leverages both **Caffeine cache for ultra-fast in-memory access** and **Redis for distributed caching across multiple instances**.
 
@@ -102,13 +106,13 @@ By combining **Caffeine for ultra-fast local caching, Redis for distributed shar
 
 ### **Cache Breakdown Protection with Redisson Mutual Exclusion**
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXeK3swcHnftgjMHFo8EHuRgmWSBkKCRQZwCWxK-fEFXqSthW-g5xL7knJt4HD32IMQaHSgL3AlJpbWYOSclEos80VL2mnhehlNFf1QBWiX2F4M9Om5W8SZToQhMlMTi_yFNL617?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcZ9LmASChqU1-RUtw5Bbg0q8HL93fR4VRAl1i-sQRs9kOxmr8st-HWJdc2QACGO2hegOrY_DIgjFbzaKxkE10gB9c90VojdZTjpd5jhbnwfdI8mmr0MD1GYUHkhbxKtPoGaTvZ?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 In this system, **cache breakdown** can occur when a highly requested coupon—often referred to as a **hotkey**—expires from **Redis** and is not immediately repopulated. During high-traffic periods, this presents a significant risk: if multiple processes attempt to access the same expired coupon simultaneously, they will all bypass the cache and query **MySQL** directly. This sudden surge of requests can overwhelm the database, causing severe performance degradation or, in extreme cases, system crashes.
 
 To illustrate this issue, imagine a scenario where **Process 1** and **Process 2** both try to retrieve the same coupon from Redis. If the coupon key has already expired, neither process will find the cached data. Without any form of coordination, both processes will proceed to query MySQL simultaneously. If hundreds or even thousands of users are trying to access this coupon at once—especially during peak sales events—the database could be flooded with simultaneous queries for the same data, potentially leading to system failure due to the sheer volume of requests.
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXdgkdGF2UsGycFmz4j0crDI6moh5yRF3X6QGCKrWsmS6d4VL4dnvLz81KxdVnkRCzvGMyEpjc_jw34nbhfQmDUgVYSx2ay3YoY5aRDohr67aYkMPID3sSRixFzAqi9nkizxppQwzA?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXdcpHYybX87noeucyaadxmAWiBUelhrPs4r0jX7an2tWjtODeSQNbC9D81nPlzmtFFP8DsvnzBcRwUuYGmDusUQpRIq686SMXnzw1j-5_LuSUt2TeGb8AW7cAsnFk95_f48HZn26A?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 To prevent this, the system employs a **mutual exclusion lock** using **Redisson's distributed locking mechanism**. When Process 1 detects that the coupon is missing from Redis, it attempts to acquire a Redis-based lock. If successful, it becomes the only process permitted to query MySQL for that coupon. Once the data is retrieved, Process 1 repopulates the Redis cache with the updated coupon information and then releases the lock. Meanwhile, when Process 2 tries to acquire the same lock, it finds that the lock is already held by Process 1. Instead of waiting indefinitely or attempting its own database query, Process 2 immediately returns a **"Try Again Later"** response to the client. This trade-off is acceptable because cache reconstruction typically completes within milliseconds, and cache breakdown events are infrequent.
 
@@ -119,9 +123,7 @@ This is where **Redisson** proves invaluable. It offers an auto-expiring distrib
 The choice of **Redisson** is driven by its ability to provide both **distributed mutual exclusion** and a **fail-safe Watchdog mechanism**. This combination ensures that only one process can repopulate the cache at a time, effectively preventing cache breakdown. At the same time, it safeguards against potential deadlocks caused by unexpected process failures. By integrating Redisson’s distributed locking and Watchdog features, the system protects **MySQL** from sudden load spikes, maintains consistent cache integrity, and ensures stable performance under heavy traffic—allowing the platform to handle high-concurrency scenarios reliably without compromising database stability.
 
 
-### Authentication with Keycloak and Spring Security
-
-******![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcMFvNQ_5AaeSQ9UTLTgY58_2mD9LfyEkwGnUz_8HMSrDFYjhJuaBD_fXPduSO_STWTHTU1DaO6FDcGSogs9W_KFoYG0ltruXhnj0S3LmRlaZhuDoO6HzBeeTVslKck0aKAGVJjIg?key=gh4idSIF-ZqgJoW6XwLW-efd)******
+### **Authentication with Keycloak and Spring Security **![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcZu5uHOdqu6kjfqyjoFIvXzemdW9GZ2k8OZHrNXQf5FRx8CEoUS4Ng_FUoC5h2HXjCLITJUshJZLf8b-ihXmyKXtzVw9fO9uXy6Ynqdo-mG3msNgpBJOjVWAfhX-UAAWrA2W4rVg?key=gh4idSIF-ZqgJoW6XwLW-efd)****
 
 User authentication and API security are **critical components** of the system, ensuring that only authorized users can access restricted resources while maintaining **scalability, flexibility, and ease of management**. The system implements **Keycloak**, integrated with **Spring Security**, as the central authentication and authorization provider. **JWT (JSON Web Token) tokens** are used to enable **stateless authentication**, allowing secure user identity verification across multiple microservices without requiring persistent session storage.
 
@@ -136,7 +138,7 @@ By implementing **Keycloak with Spring Security**, the system ensures that authe
 
 ### **Load Balancing with NGINX Reverse Proxy**
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXffPMJb_qt20dP6Hgbmatdz53OiHQzKXesjUZIY63i_TChOG1AHLeS-JtZFj1bnNBfrI-CFjuPAy0dUkg9xjRyG7GGA_T2jt-0_8BAkHWqVPAVHKLbyjc9puVj8oi5BQs2y_re4Og?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXdGyw8bvCH_YllSaSWVQP9l3eUxxT0YziMmM2vUVPaFtZ9f_MKhwk36DhGFMBc1WE1657h5YMoFzKRCxLtTaGK8d2q1Xi8GfZg3OdXP7P5tIISlg0lH-6o8wdfYHpeipcnQp7ci3w?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 To efficiently handle user requests, **NGINX is used as a reverse proxy**, acting as an intermediary between clients and backend services. It plays a crucial role in **hosting the frontend, distributing traffic across backend servers, improving performance, and enhancing security**. Without a reverse proxy, all user requests would be sent directly to the backend servers, increasing resource consumption, slowing response times, and creating bottlenecks under high traffic conditions. By integrating NGINX, the system benefits from **load balancing, request routing, caching, compression, and security enhancements**, ensuring a smooth and efficient user experience.
 
@@ -160,18 +162,29 @@ Alternatives such as **MongoDB** offer advantages in terms of **flexible schema 
 Given the system’s need for **strict transactional control**, **accurate inventory tracking**, and **schema rigidity**, MySQL remains the most appropriate choice. Its robust consistency model ensures that all transactions are reliably processed, safeguarding the integrity of both financial data and stock management during periods of high traffic.
 
 
+### **Backend Scalability**
+
+The backend of the Flash Sale System is designed with scalability at its core, leveraging a combination of distributed messaging, caching, and load-balancing technologies to handle high-concurrency scenarios effectively. **Kafka** plays a pivotal role by decoupling order placement from payment processing, allowing the system to handle a large volume of concurrent order requests without overwhelming the backend services. It efficiently queues and streams events, enabling asynchronous processing and maintaining system responsiveness under heavy loads.
+
+**Redis** further enhances scalability through its in-memory data store capabilities, ensuring rapid access to frequently used data such as inventory counts and user purchase validation. Combined with **Redis Pub/Sub** and **WebSocket** connections, the system can deliver real-time updates to users across distributed server instances, ensuring timely communication even during peak traffic. This design minimizes delays and prevents bottlenecks by ensuring that updates reach the correct server instance handling the user's session.
+
+The caching layer is reinforced with **Caffeine** for ultra-fast, in-memory local caching within each application instance, drastically reducing latency for frequently accessed data. By combining Caffeine for local cache hits and Redis for distributed caching, the system minimizes database load while maintaining data consistency across multiple servers.
+
+Lastly, **NGINX** functions as a reverse proxy and load balancer, distributing incoming requests across the backend servers evenly. This prevents any single server from becoming a bottleneck, ensuring smooth handling of concurrent user requests and maximizing resource utilization. Together, these technologies enable the backend to scale dynamically and efficiently, maintaining high performance and reliability during traffic spikes.
+
+
 ### **Deployment Strategy and Challenges**
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcBvyc82V698aFD1dPPDY0fzNKjTy_8kfA0z4dEQRMzh23_Y2n-Xnrc5h9Jq1E_O-JoEehHx9E-ENAFg3Hkg-RF3a-1dCeBJO0301xJrvYYkdDcjVMCl6d0fhPYdHZJ02m4SsURKA?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcIbPR-1n9RXjCVxt4thV0ux11FY6vXTlm336gwbAIteM365cEeq2vigXo-_pSGPOrnsD7GvKWcoViv4tHgeCsW1n73V5Fi6orGXzWQWFlRI7JTry-y_yjqidJGgt-XRCoDLxJIHQ?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
-The current development environment hosts all middleware and backend services using **Docker containers** on **AWS EC2** instances, deployed within a **public subnet**. This setup facilitates a streamlined development process by enabling direct external access without the need for additional networking configurations like a NAT gateway. It offers a **cost-effective** solution for development purposes while providing hands-on experience in managing containerized applications manually. Additionally, **AWS S3** is utilized for storing **coupon images**, eliminating the need for local storage and allowing seamless media asset access across different services.
+The current development environment hosts all middleware and backend services using **Docker containers** on **AWS EC2 instances**, deployed within a **public subnet**. There are currently **three backend servers deployed on a single EC2 instance**, facilitating parallel processing and efficient load distribution. This setup streamlines the development process by enabling direct external access without requiring additional networking configurations, such as a NAT gateway. It offers a cost-effective solution for development purposes while providing hands-on experience in managing containerized applications manually. Additionally, **AWS S3** is utilized for storing coupon images, eliminating the need for local storage and allowing seamless media asset access across different services.
 
-However, this configuration presents several critical limitations, especially in terms of **scalability**, **availability**, and **security**. The current deployment lacks **horizontal scaling** and **high availability** since all workloads run within a **single EC2 instance**. This means the system cannot dynamically scale with increased traffic, leading to potential **performance degradation** when resource limits are reached. Furthermore, if the EC2 instance fails, the entire application becomes unavailable, causing **downtime** and loss of service continuity.
+However, this configuration presents several critical limitations, particularly regarding scalability, availability, and security. The current deployment lacks horizontal scaling and high availability, as all workloads run within a single EC2 instance. This limitation prevents the system from dynamically scaling with increased traffic, potentially leading to performance degradation when resource limits are reached. Moreover, if the EC2 instance fails, the entire application becomes unavailable, resulting in downtime and loss of service continuity.
 
-Security is another major concern. Running backend services in a **public subnet** exposes them directly to the internet, increasing the risk of **unauthorized access**, **DDoS attacks**, and **data breaches**. Ideally, sensitive services should be hosted in a **private subnet**, with access restricted through an **Elastic Load Balancer (ELB)** or **API Gateway**. While configuring a private subnet would enhance security, it currently adds complexity and cost due to the need for a **NAT gateway** or **VPC peering**.
+**Security** is another major concern. Running backend services in a public subnet exposes them directly to the internet, increasing the risk of unauthorized access, DDoS attacks, and data breaches. Ideally, sensitive services should be hosted in a **private subnet**, with access restricted through an **Elastic Load Balancer (ELB)** or **API Gateway**. While configuring a private subnet would enhance security, it currently adds complexity and cost due to the need for a **NAT gateway** or **VPC peering**.
 
-To address these issues, there is a future plan to **migrate to AWS Elastic Kubernetes Service (EKS)** within a **private subnet**. EKS offers a fully managed Kubernetes environment, handling critical operations such as **control plane management**, **scalability**, and **security**. In this upgraded architecture, workloads will be distributed across **multiple availability zones**, ensuring **fault tolerance** and enabling **auto-scaling** based on resource demand.
+To address these issues, there is a future plan to migrate to **AWS Elastic Kubernetes Service (EKS)** within a private subnet. EKS offers a fully managed Kubernetes environment, handling critical operations such as control plane management, scalability, and security. In this upgraded architecture, workloads will be distributed across multiple availability zones, ensuring fault tolerance and enabling **auto-scaling** based on resource demand.
 
-Access to the private subnet will be secured using a **Bastion Host**, which will allow controlled, secure administrative access without exposing the infrastructure to the public internet. This setup will significantly enhance security while maintaining operational flexibility. Incoming traffic will be securely routed to backend services through an **Elastic Load Balancer (ELB)**, ensuring only necessary endpoints are exposed.
+Access to the private subnet will be secured using a **Bastion Host**, providing controlled and secure administrative access without exposing the infrastructure to the public internet. Incoming traffic will be securely routed to backend services through an **Elastic Load Balancer (ELB)**, ensuring that only necessary endpoints are exposed.
 
-While the current Docker-based EC2 deployment serves as a practical and cost-effective solution for **development and testing**, it is not viable for production due to inherent limitations in **scalability**, **availability**, and **security**. Migrating to **AWS EKS** with private networking and a bastion host will provide a robust, scalable, and secure infrastructure capable of handling dynamic workloads and ensuring system resilience.
+While the current Docker-based EC2 deployment serves as a practical and cost-effective solution for development and testing, it is not viable for production due to inherent limitations in scalability, availability, and security. Migrating to **AWS EKS** with private networking and a bastion host will provide a robust, scalable, and secure infrastructure capable of handling dynamic workloads and ensuring system resilience.
