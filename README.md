@@ -25,6 +25,8 @@
 
 ## **1. Project Overview**
 
+****Project URL:** [**Vite App**](http://3.145.159.42/)**
+
 ![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXfxTMzgHCrGQjYyzm7t-NLz1TsevTYgNTlG4CYfE82WELZOs--Hv-aIYH7TbBSrlldaYkLESZHuJYxOik4IN_cv2AmYkPN-dCwogrtP_vBGCBucmEbrh4hmMUi7iUPGj4ryoCq_?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 The Flash Sale System is designed to facilitate high-speed coupon purchases during flash sales while ensuring performance, security, and data consistency. Users can register and log in using their email without verification, browse available coupons, and attempt to purchase them in real time. The system does not support password modification or payment processing, as the primary focus is on managing high-demand, time-sensitive coupon sales efficiently.
