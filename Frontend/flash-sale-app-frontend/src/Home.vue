@@ -132,7 +132,7 @@ export default {
 
     async fetchCoupons() {
       try {
-        console.log(import.meta.env.VITE_API_BASE_URL);
+        // console.log(import.meta.env.VITE_API_BASE_URL);
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/coupons?page=${this.currentPage}&size=${this.pageSize}`);
         if (!response.ok) throw new Error(`Failed to fetch coupons: ${response.status}`);
 

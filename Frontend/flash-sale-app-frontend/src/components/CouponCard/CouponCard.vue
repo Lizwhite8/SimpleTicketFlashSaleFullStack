@@ -1,16 +1,25 @@
 <template>
-  <div class="card d-flex flex-row p-3 m-2">
-    <img :src="coupon.imageURL" class="img-fluid" style="width: 150px; height: 150px; object-fit: cover" />
+  <div class="card d-flex flex-column flex-md-row p-3 m-2">
+    <img
+      :src="coupon.imageURL"
+      class="img-fluid responsive-image"
+      style="object-fit: cover"
+    />
     <div class="d-flex flex-column flex-grow-1 ms-3">
-      <h5>{{ coupon.name }}</h5>
+      <h5 class="coupon-title">{{ coupon.name }}</h5>
       <p class="text-muted">{{ coupon.description }}</p>
-      <div class="mt-auto d-flex" style="justify-content: space-between">
-        <p>
-          <strong>Price:</strong> 💰{{ coupon.price }} | <strong>Qty:</strong>
-          {{ coupon.quantity }}
-        </p>
-        <button class="btn btn-primary" style="min-width: 100px" @click="buyCoupon"
-          :disabled="!user || isProcessing || purchasedCoupons.includes(coupon.id)">
+      <div class="mt-auto">
+        <div class="price-qty d-flex justify-content-between">
+          <p>
+            <strong>Price:</strong> 💰{{ coupon.price }} | <strong>Qty:</strong>
+            {{ coupon.quantity }}
+          </p>
+        </div>
+        <button
+          class="btn btn-primary buy-button"
+          @click="buyCoupon"
+          :disabled="!user || isProcessing || purchasedCoupons.includes(coupon.id)"
+        >
           Buy
         </button>
       </div>
@@ -18,6 +27,39 @@
     <Snackbar ref="snackbar" />
   </div>
 </template>
+
+<style scoped>
+/* Default size for larger screens */
+.responsive-image {
+  width: 150px;
+  height: 150px;
+}
+
+/* Full width and height for smaller screens */
+@media (max-width: 767px) {
+  .responsive-image {
+    width: 100%;
+    height: 100%;
+  }
+
+  .coupon-title {
+    margin-top: 15px; /* Add margin to the title on small screens */
+  }
+
+  .price-qty {
+    display: flex;
+    justify-content: space-around;
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .buy-button {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+  }
+}
+</style>
 
 <script>
 import Snackbar from "../Snackbar/Snackbar.vue";
