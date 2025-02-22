@@ -119,7 +119,9 @@ This is where **Redisson** proves invaluable. It offers an auto-expiring distrib
 The choice of **Redisson** is driven by its ability to provide both **distributed mutual exclusion** and a **fail-safe Watchdog mechanism**. This combination ensures that only one process can repopulate the cache at a time, effectively preventing cache breakdown. At the same time, it safeguards against potential deadlocks caused by unexpected process failures. By integrating Redisson’s distributed locking and Watchdog features, the system protects **MySQL** from sudden load spikes, maintains consistent cache integrity, and ensures stable performance under heavy traffic—allowing the platform to handle high-concurrency scenarios reliably without compromising database stability.
 
 
-### **Authentication with Keycloak and Spring Security **![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXfx5vIJdAcv24o93OP8ao0ngPd795yXrt6B68dUi_HTLcUUSAHDQRnX7Mf7Pr0751AZPVNXNi24P-F7So0X_K_GlBt6F0Yl8S0_iJR8h3ELEoojaDtrmg4BN2fhcgT1jyBvN5C1IQ?key=gh4idSIF-ZqgJoW6XwLW-efd)****
+### **Authentication with Keycloak and Spring Security **
+
+******![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcMFvNQ_5AaeSQ9UTLTgY58_2mD9LfyEkwGnUz_8HMSrDFYjhJuaBD_fXPduSO_STWTHTU1DaO6FDcGSogs9W_KFoYG0ltruXhnj0S3LmRlaZhuDoO6HzBeeTVslKck0aKAGVJjIg?key=gh4idSIF-ZqgJoW6XwLW-efd)******
 
 User authentication and API security are **critical components** of the system, ensuring that only authorized users can access restricted resources while maintaining **scalability, flexibility, and ease of management**. The system implements **Keycloak**, integrated with **Spring Security**, as the central authentication and authorization provider. **JWT (JSON Web Token) tokens** are used to enable **stateless authentication**, allowing secure user identity verification across multiple microservices without requiring persistent session storage.
 
