@@ -29,7 +29,7 @@
 
 ## **1. Project Overview**
 
-**Project URL:** [**Vite App**](http://3.145.159.42/)
+**Project URL:** [**Vite App**](http://3.13.243.214/)
 
 ![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXeUqBfoBKYDMMqcay70AHxikZeOA1UXW_PnaLYX-_Ac2mxDij70OnchK0o1_t-w-sB9I4x4UVODn-3hyHApkGP4cy1Q2C7xYno9gkh3ng8bUUlaqqKVW0_j6e9eFrSyz-_C4XSg?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
