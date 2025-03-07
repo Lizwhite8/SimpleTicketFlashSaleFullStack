@@ -1,4 +1,4 @@
-      # **Flash Sale System Requirements Document**
+# **Flash Sale System Requirements Document**
 
 [Flash Sale System Requirements Document](#flash-sale-system-requirements-document)
 
