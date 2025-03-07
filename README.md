@@ -1,4 +1,4 @@
-# **Flash Sale System Requirements Document**
+      # **Flash Sale System Requirements Document**
 
 [Flash Sale System Requirements Document](#flash-sale-system-requirements-document)
 
@@ -175,7 +175,7 @@ Lastly, **NGINX** functions as a reverse proxy and load balancer, distributing i
 
 ### **Deployment Strategy and Challenges**
 
-![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXcIbPR-1n9RXjCVxt4thV0ux11FY6vXTlm336gwbAIteM365cEeq2vigXo-_pSGPOrnsD7GvKWcoViv4tHgeCsW1n73V5Fi6orGXzWQWFlRI7JTry-y_yjqidJGgt-XRCoDLxJIHQ?key=gh4idSIF-ZqgJoW6XwLW-efd)
+![](https://lh7-rt.googleusercontent.com/docsz/AD_4nXdsIDvT4dhPBHA7NBHww1KpxOq9guvgPpQpDSxCfaBYY_ou5ghDFkwTZCBQkbyY8p6Nhw0nnJ8GnRc4LKeVhcj24CNUeY2DvqkPSPlOG8uzH-b-VVURF8fS_qzLcLNIy-3ADthDqA?key=gh4idSIF-ZqgJoW6XwLW-efd)
 
 The current development environment hosts all middleware and backend services using **Docker containers** on **AWS EC2 instances**, deployed within a **public subnet**. There are currently **three backend servers deployed on a single EC2 instance**, facilitating parallel processing and efficient load distribution. This setup streamlines the development process by enabling direct external access without requiring additional networking configurations, such as a NAT gateway. It offers a cost-effective solution for development purposes while providing hands-on experience in managing containerized applications manually. Additionally, **AWS S3** is utilized for storing coupon images, eliminating the need for local storage and allowing seamless media asset access across different services.
 
